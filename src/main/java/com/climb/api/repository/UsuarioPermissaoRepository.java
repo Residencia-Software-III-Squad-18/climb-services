@@ -1,0 +1,12 @@
+package com.climb.api.repository;
+
+import com.climb.api.model.UsuarioPermissao;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface UsuarioPermissaoRepository extends JpaRepository<UsuarioPermissao, Long> {
+
+    List<UsuarioPermissao> findByUsuarioIdUsuario(Long usuarioId);
+
+}
