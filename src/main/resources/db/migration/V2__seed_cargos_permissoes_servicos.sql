@@ -25,30 +25,13 @@ INSERT INTO cargos (nome) VALUES
 ALTER TABLE permissoes ADD COLUMN codigo VARCHAR(100) UNIQUE NOT NULL;
 
 INSERT INTO permissoes (descricao, codigo) VALUES
--- Contratos
-('Visualização de Contratos', 'CONTRATO_VISUALIZACAO'),
-('Criação de Contratos', 'CONTRATO_CRIACAO'),
-('Edição de Contratos', 'CONTRATO_EDICAO'),
-('Exclusão de Contratos', 'CONTRATO_EXCLUSAO'),
--- Cargos
-('Visualização de Cargos', 'CARGO_VISUALIZACAO'),
-('Criação de Cargos', 'CARGO_CRIACAO'),
-('Edição de Cargos', 'CARGO_EDICAO'),
-('Exclusão de Cargos', 'CARGO_EXCLUSAO'),
--- Documentos jurídicos
-('Visualização de Documentos Jurídicos', 'DOCUMENTO_JURIDICO_VISUALIZACAO'),
-('Criação de Documentos Jurídicos', 'DOCUMENTO_JURIDICO_CRIACAO'),
-('Edição de Documentos Jurídicos', 'DOCUMENTO_JURIDICO_EDICAO'),
-('Exclusão de Documentos Jurídicos', 'DOCUMENTO_JURIDICO_EXCLUSAO'),
--- Relatórios
-('Visualização de Relatórios', 'RELATORIO_VISUALIZACAO'),
-('Criação de Relatórios', 'RELATORIO_CRIACAO'),
-('Edição de Relatórios', 'RELATORIO_EDICAO'),
-('Exclusão de Relatórios', 'RELATORIO_EXCLUSAO'),
--- Outras permissões
+('Visualização, criação, edição e exclusão de Contratos', 'CONTRATO_CRUD'),
+('Visualização, criação, edição e exclusão de cargos', 'CARGO_CRUD'),
+('Visualização, criação, edição e exclusão de documentos jurídicos', 'DOCUMENTO_JURIDICO_CRUD'),
 ('Aplicação de nível de complexidade de contratos', 'CONTRATO_NIVEL_COMPLEXIDADE'),
 ('Edição restrita da planilha com necessidade de solicitar permissão', 'PLANILHA_EDICAO_RESTRITA'),
 ('Agendamento de Reuniões', 'REUNIAO_AGENDAMENTO'),
+('Visualização, criação, edição e exclusão de relatórios', 'RELATORIO_CRUD'),
 ('Upload de arquivos', 'ARQUIVO_UPLOAD'),
 ('Download de arquivos', 'ARQUIVO_DOWNLOAD');
 
