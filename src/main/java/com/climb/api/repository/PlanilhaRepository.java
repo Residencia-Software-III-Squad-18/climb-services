@@ -6,6 +6,6 @@ import java.util.List;
 
 public interface PlanilhaRepository extends JpaRepository<Planilha, Long> {
 
-    List<Planilha> findByContrato_Id(Long contratoId);
+    List<Planilha> findByContrato_IdContrato(Long contratoId);
 
 }
