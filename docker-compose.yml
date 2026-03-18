@@ -1,0 +1,35 @@
+services:
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: climb
+      MYSQL_USER: ${MYSQL_USER:-climb}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootsecret}
+    ports:
+      - "3306:3306"
+    volumes:
+      - climb_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  climb-api:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/climb
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-climb}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-secret}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  climb_db_data:

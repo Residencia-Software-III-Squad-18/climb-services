@@ -7,6 +7,6 @@ import java.util.List;
 
 public interface EmpresaServicoRepository extends JpaRepository<EmpresaServico, Long> {
 
-    List<EmpresaServico> findByEmpresaIdEmpresa(Long empresaId);
+    List<EmpresaServico> findByEmpresa_Id(Long empresaId);
 
 }

@@ -8,6 +8,6 @@ import com.climb.api.model.Reuniao;
 
 public interface ReuniaoRepository extends JpaRepository<Reuniao, Long> {
 
-    List<Reuniao> findByEmpresaIdEmpresa(Long empresaId);
+    List<Reuniao> findByEmpresa_Id(Long empresaId);
 
 }

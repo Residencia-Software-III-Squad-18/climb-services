@@ -6,6 +6,6 @@ import java.util.List;
 
 public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
 
-    List<Relatorio> findByContratoIdContrato(Long contratoId);
+    List<Relatorio> findByContrato_Id(Long contratoId);
 
 }
