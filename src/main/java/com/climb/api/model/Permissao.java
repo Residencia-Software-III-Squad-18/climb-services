@@ -14,4 +14,7 @@ public class Permissao {
     @Column(name = "descricao")
     private String descricao;
 
+    @Column(name = "codigo", unique = true, nullable = false)
+    private String codigo;
+
 }
