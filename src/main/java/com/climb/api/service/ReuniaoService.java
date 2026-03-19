@@ -25,7 +25,7 @@ public class ReuniaoService {
     }
 
     public List<Reuniao> listarPorEmpresa(Long empresaId) {
-        return repository.findByEmpresaIdEmpresa(empresaId);
+        return repository.findByEmpresa_IdEmpresa(empresaId);
     }
 
     public Reuniao criar(Reuniao reuniao) {
