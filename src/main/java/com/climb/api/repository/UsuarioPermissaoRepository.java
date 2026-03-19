@@ -7,6 +7,6 @@ import java.util.List;
 
 public interface UsuarioPermissaoRepository extends JpaRepository<UsuarioPermissao, Long> {
 
-    List<UsuarioPermissao> findByUsuarioIdUsuario(Long usuarioId);
+    List<UsuarioPermissao> findByUsuario_Id(Long usuarioId);
 
 }
