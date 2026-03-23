@@ -5,10 +5,10 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:}
 
   flyway:
-    enabled: true
+    enabled: false
     baseline-on-migrate: true
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: true
