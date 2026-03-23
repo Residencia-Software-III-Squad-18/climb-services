@@ -15,6 +15,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+  flyway:
+    image: flyway/flyway
+    command: -connectRetries=60 migrate
+    env_file:
+      - .env
+    environment:
+      FLYWAY_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://db:3306/climb}
+      FLYWAY_USER: ${SPRING_DATASOURCE_USERNAME:-${MYSQL_USER:-climb}}
+      FLYWAY_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-${MYSQL_PASSWORD:-secret}}
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
 
   climb-api:
     build: .
@@ -23,11 +39,14 @@ services:
     env_file:
       - .env
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/climb
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-climb}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-secret}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_FLYWAY_ENABLED: "false"
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://db:3306/climb}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-${MYSQL_USER:-climb}}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-${MYSQL_PASSWORD:-secret}}
     depends_on:
+      flyway:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
 

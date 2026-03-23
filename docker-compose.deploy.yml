@@ -1,0 +1,29 @@
+services:
+  flyway:
+    image: flyway/flyway
+    command: -connectRetries=60 migrate
+    env_file:
+      - .env
+    environment:
+      FLYWAY_URL: ${SPRING_DATASOURCE_URL}
+      FLYWAY_USER: ${SPRING_DATASOURCE_USERNAME}
+      FLYWAY_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql
+    restart: "no"
+
+  climb-api:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
