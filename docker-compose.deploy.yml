@@ -31,6 +31,13 @@ services:
         condition: service_completed_successfully
     networks:
       - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.climb-api.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.climb-api.entrypoints=websecure"
+      - "traefik.http.routers.climb-api.tls.certResolver=letsencrypt"
+      - "traefik.http.services.climb-api.loadbalancer.server.port=8080"
 
 networks:
   dokploy-network:
