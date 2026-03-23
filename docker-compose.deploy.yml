@@ -1,7 +1,7 @@
 services:
   flyway:
     image: flyway/flyway
-    command: -connectRetries=60 migrate
+    command: -connectRetries=10 migrate
     env_file:
       - .env
     environment:
@@ -12,6 +12,8 @@ services:
     volumes:
       - ./src/main/resources/db/migration:/flyway/sql
     restart: "no"
+    networks:
+      - dokploy-network
 
   climb-api:
     build: .
@@ -27,3 +29,9 @@ services:
     depends_on:
       flyway:
         condition: service_completed_successfully
+    networks:
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true
