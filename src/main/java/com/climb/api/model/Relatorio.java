@@ -2,11 +2,7 @@ package com.climb.api.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "relatorios")
 public class Relatorio {
@@ -26,4 +22,15 @@ public class Relatorio {
     @Column(name = "data_envio")
     private LocalDate dataEnvio;
 
+    public Long getIdRelatorio() { return idRelatorio; }
+    public void setIdRelatorio(Long idRelatorio) { this.idRelatorio = idRelatorio; }
+
+    public Contrato getContrato() { return contrato; }
+    public void setContrato(Contrato contrato) { this.contrato = contrato; }
+
+    public String getUrlPdf() { return urlPdf; }
+    public void setUrlPdf(String urlPdf) { this.urlPdf = urlPdf; }
+
+    public LocalDate getDataEnvio() { return dataEnvio; }
+    public void setDataEnvio(LocalDate dataEnvio) { this.dataEnvio = dataEnvio; }
 }

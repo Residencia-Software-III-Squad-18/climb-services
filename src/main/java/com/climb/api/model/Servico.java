@@ -1,11 +1,7 @@
 package com.climb.api.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "servicos")
 public class Servico {
@@ -18,4 +14,9 @@ public class Servico {
     @Column(name = "nome")
     private String nome;
 
+    public Long getIdServico() { return idServico; }
+    public void setIdServico(Long idServico) { this.idServico = idServico; }
+
+    public String getNome() { return nome; }
+    public void setNome(String nome) { this.nome = nome; }
 }
