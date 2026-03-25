@@ -47,8 +47,8 @@ public class UsuarioService {
             throw new RuntimeException("Email já cadastrado");
         }
 
-        if (usuario.getAtivo() == null) {
-            usuario.setAtivo(true);
+        if (usuario.getSituacao() != "ATIVO" && usuario.getSituacao() != "INATIVO") {
+            usuario.setSituacao("ATIVO");
         }
 
         return repository.save(usuario);
@@ -75,7 +75,7 @@ public class UsuarioService {
         usuario.setEmail(atualizado.getEmail());
         usuario.setContato(atualizado.getContato());
         usuario.setSenhaHash(atualizado.getSenhaHash());
-        usuario.setAtivo(atualizado.getAtivo());
+        usuario.setSituacao(atualizado.getSituacao());
         usuario.setCargo(atualizado.getCargo());
 
         return repository.save(usuario);

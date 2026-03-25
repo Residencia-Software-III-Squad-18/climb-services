@@ -30,7 +30,7 @@ public class Usuario {
     private String senhaHash;
 
     @Column(nullable = false)
-    private Boolean ativo;
+    private String situacao;
 
     @ManyToOne
     @JoinColumn(name = "cargo_id")
