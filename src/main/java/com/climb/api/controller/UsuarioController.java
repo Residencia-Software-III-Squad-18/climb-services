@@ -2,16 +2,10 @@ package com.climb.api.controller;
 
 import java.util.List;
 
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.climb.api.model.Usuario;
+import com.climb.api.model.dto.UsuarioRequestDTO;
+import com.climb.api.model.dto.UsuarioResponseDTO;
 import com.climb.api.service.UsuarioService;
 
 @RestController
@@ -25,23 +19,24 @@ public class UsuarioController {
     }
 
     @GetMapping
-    public List<Usuario> listar() {
+    public List<UsuarioResponseDTO> listar() {
         return service.listar();
     }
 
     @GetMapping("/{id}")
-    public Usuario buscarPorId(@PathVariable Long id) {
-        return service.buscarPorId(id);
+    public UsuarioResponseDTO buscarPorId(@PathVariable Long id) {
+        return service.buscarPorIdDTO(id);
     }
 
     @PostMapping
-    public Usuario criar(@RequestBody Usuario usuario) {
-        return service.criar(usuario);
+    public UsuarioResponseDTO criar(@RequestBody UsuarioRequestDTO dto) {
+        return service.criar(dto);
     }
 
     @PutMapping("/{id}")
-    public Usuario atualizar(@PathVariable Long id, @RequestBody Usuario atualizado) {
-        return service.atualizar(id, atualizado);
+    public UsuarioResponseDTO atualizar(@PathVariable Long id,
+                                        @RequestBody UsuarioRequestDTO dto) {
+        return service.atualizar(id, dto);
     }
 
     @DeleteMapping("/{id}")
