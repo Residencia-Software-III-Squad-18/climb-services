@@ -45,7 +45,7 @@ public class Usuario {
         name = "usuario_permissoes",
         joinColumns = @JoinColumn(name = "usuario_id"),
         inverseJoinColumns = @JoinColumn(name = "permissao_id")
-    )`
+    )
     private Set<Permissao> permissoes = new HashSet<>();
 
 }
