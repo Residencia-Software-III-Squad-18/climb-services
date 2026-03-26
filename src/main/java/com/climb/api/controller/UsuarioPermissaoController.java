@@ -50,20 +50,6 @@ public class UsuarioPermissaoController {
         }
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<UsuarioPermissao>> atualizar(
-            @PathVariable Long id,
-            @RequestBody UsuarioPermissaoDTO dto) {
-        try {
-            return ResponseEntity.ok(ApiResponse.ok(
-                service.atualizar(id, dto.getUsuarioId(), dto.getPermissaoId()),
-                "Permissão atualizada com sucesso"
-            ));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deletar(@PathVariable Long id) {
         try {

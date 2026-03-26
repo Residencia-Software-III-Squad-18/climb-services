@@ -1,8 +1,6 @@
 package com.climb.api.service;
 
-import com.climb.api.config.CargosPermissoesConfig;
 import com.climb.api.model.PermissaoCodigo;
-import com.climb.api.model.Usuario;
 import com.climb.api.model.UsuarioPermissao;
 import com.climb.api.repository.UsuarioPermissaoRepository;
 import com.climb.api.repository.UsuarioRepository;
@@ -25,20 +23,10 @@ public class RbacService {
 
     public Set<PermissaoCodigo> getPermissoesDoUsuario(Long usuarioId) {
 
-        Usuario usuario = usuarioRepository.findById(usuarioId)
+        usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado: id=" + usuarioId));
 
         Set<PermissaoCodigo> permissoes = EnumSet.noneOf(PermissaoCodigo.class);
-
-        if (usuario.getCargo() != null) {
-            String nomeCargo = usuario.getCargo().getNome();
-            Set<PermissaoCodigo> permissoesDoCargo =
-                    CargosPermissoesConfig.PERMISSOES_POR_CARGO.get(nomeCargo);
-
-            if (permissoesDoCargo != null) {
-                permissoes.addAll(permissoesDoCargo);
-            }
-        }
 
         List<UsuarioPermissao> permissoesIndividuais =
                 usuarioPermissaoRepository.findByUsuario_Id(usuarioId);
@@ -48,28 +36,11 @@ public class RbacService {
                 PermissaoCodigo codigo = PermissaoCodigo.valueOf(up.getPermissao().getCodigo());
                 permissoes.add(codigo);
             } catch (IllegalArgumentException e) {
+                // Código inválido no banco — ignora
             }
         }
 
         return permissoes;
-    }
-
-    public Set<PermissaoCodigo> getPermissoesDoCargo(Long usuarioId) {
-
-        Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado: id=" + usuarioId));
-
-        if (usuario.getCargo() == null) {
-            return EnumSet.noneOf(PermissaoCodigo.class);
-        }
-
-        String nomeCargo = usuario.getCargo().getNome();
-        Set<PermissaoCodigo> permissoesDoCargo =
-                CargosPermissoesConfig.PERMISSOES_POR_CARGO.get(nomeCargo);
-
-        return permissoesDoCargo != null
-                ? EnumSet.copyOf(permissoesDoCargo)
-                : EnumSet.noneOf(PermissaoCodigo.class);
     }
 
     public boolean temPermissao(Long usuarioId, PermissaoCodigo permissao) {

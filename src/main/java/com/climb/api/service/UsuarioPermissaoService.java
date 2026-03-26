@@ -57,22 +57,6 @@ public class UsuarioPermissaoService {
 
         return repository.save(usuarioPermissao);
     }
-    
-    public UsuarioPermissao atualizar(Long id, Long usuarioId, Long permissaoId) {
-
-        UsuarioPermissao usuarioPermissao = buscarPorId(id);
-
-        Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-
-        Permissao permissao = permissaoRepository.findById(permissaoId)
-                .orElseThrow(() -> new RuntimeException("Permissão não encontrada"));
-
-        usuarioPermissao.setUsuario(usuario);
-        usuarioPermissao.setPermissao(permissao);
-
-        return repository.save(usuarioPermissao);
-    }
 
     public void deletar(Long id) {
         UsuarioPermissao up = buscarPorId(id);
