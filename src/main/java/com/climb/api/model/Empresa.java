@@ -1,6 +1,8 @@
 package com.climb.api.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import org.hibernate.validator.constraints.br.CNPJ;
 
 @Entity
 @Table(name = "empresas")
