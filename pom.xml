@@ -19,7 +19,7 @@
 	<properties>
 		<java.version>25</java.version>
 		<flyway.version>11.15.0</flyway.version>
-		<lombok.version>1.18.36</lombok.version>
+		<lombok.version>1.18.42</lombok.version>
 	</properties>
 
 	<dependencies>
