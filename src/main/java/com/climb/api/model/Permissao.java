@@ -1,11 +1,7 @@
 package com.climb.api.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "permissoes")
 public class Permissao {
@@ -21,4 +17,12 @@ public class Permissao {
     @Column(name = "codigo", unique = true, nullable = false)
     private String codigo;
 
+    public Long getIdPermissao() { return idPermissao; }
+    public void setIdPermissao(Long idPermissao) { this.idPermissao = idPermissao; }
+
+    public String getDescricao() { return descricao; }
+    public void setDescricao(String descricao) { this.descricao = descricao; }
+
+    public String getCodigo() { return codigo; }
+    public void setCodigo(String codigo) { this.codigo = codigo; }
 }

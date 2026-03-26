@@ -9,4 +9,5 @@ public interface UsuarioPermissaoRepository extends JpaRepository<UsuarioPermiss
 
     List<UsuarioPermissao> findByUsuario_Id(Long usuarioId);
 
+    boolean existsByUsuario_IdAndPermissao_IdPermissao(Long usuarioId, Long permissaoId);
 }

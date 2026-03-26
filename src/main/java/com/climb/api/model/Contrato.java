@@ -1,20 +1,8 @@
 package com.climb.api.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDate;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
-
-@Getter
-@Setter
 @Entity
 @Table(name = "contratos")
 public class Contrato {
@@ -37,4 +25,18 @@ public class Contrato {
     @Column(nullable = false)
     private String status;
 
+    public Long getIdContrato() { return idContrato; }
+    public void setIdContrato(Long idContrato) { this.idContrato = idContrato; }
+
+    public Proposta getProposta() { return proposta; }
+    public void setProposta(Proposta proposta) { this.proposta = proposta; }
+
+    public LocalDate getDataInicio() { return dataInicio; }
+    public void setDataInicio(LocalDate dataInicio) { this.dataInicio = dataInicio; }
+
+    public LocalDate getDataFim() { return dataFim; }
+    public void setDataFim(LocalDate dataFim) { this.dataFim = dataFim; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

@@ -1,7 +1,10 @@
 package com.climb.api.controller;
 
 import com.climb.api.model.UsuarioPermissao;
-import com.climb.api.repository.UsuarioPermissaoRepository;
+import com.climb.api.model.dto.ApiResponse;
+import com.climb.api.model.dto.UsuarioPermissaoDTO;
+import com.climb.api.service.UsuarioPermissaoService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -10,41 +13,50 @@ import java.util.List;
 @RequestMapping("/usuario-permissoes")
 public class UsuarioPermissaoController {
 
-    private final UsuarioPermissaoRepository repository;
+    private final UsuarioPermissaoService service;
 
-    public UsuarioPermissaoController(UsuarioPermissaoRepository repository) {
-        this.repository = repository;
+    public UsuarioPermissaoController(UsuarioPermissaoService service) {
+        this.service = service;
     }
 
     @GetMapping
-    public List<UsuarioPermissao> listar() {
-        return repository.findAll();
+    public ResponseEntity<ApiResponse<List<UsuarioPermissao>>> listar() {
+        return ResponseEntity.ok(ApiResponse.ok(service.listar()));
     }
 
     @GetMapping("/{id}")
-    public UsuarioPermissao buscarPorId(@PathVariable Long id) {
-        return repository.findById(id).orElseThrow();
+    public ResponseEntity<ApiResponse<UsuarioPermissao>> buscarPorId(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(service.buscarPorId(id)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/usuario/{usuarioId}")
+    public ResponseEntity<ApiResponse<List<UsuarioPermissao>>> listarPorUsuario(@PathVariable Long usuarioId) {
+        return ResponseEntity.ok(ApiResponse.ok(service.listarPorUsuario(usuarioId)));
     }
 
     @PostMapping
-    public UsuarioPermissao criar(@RequestBody UsuarioPermissao usuarioPermissao) {
-        return repository.save(usuarioPermissao);
-    }
-
-    @PutMapping("/{id}")
-    public UsuarioPermissao atualizar(@PathVariable Long id, @RequestBody UsuarioPermissao atualizado) {
-
-        UsuarioPermissao usuarioPermissao = repository.findById(id).orElseThrow();
-
-        usuarioPermissao.setUsuario(atualizado.getUsuario());
-        usuarioPermissao.setPermissao(atualizado.getPermissao());
-
-        return repository.save(usuarioPermissao);
+    public ResponseEntity<ApiResponse<UsuarioPermissao>> criar(@RequestBody UsuarioPermissaoDTO dto) {
+        try {
+            return ResponseEntity.status(201).body(ApiResponse.ok(
+                service.criar(dto.getUsuarioId(), dto.getPermissaoId()),
+                "Permissão associada com sucesso"
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
-        repository.deleteById(id);
+    public ResponseEntity<ApiResponse<Void>> deletar(@PathVariable Long id) {
+        try {
+            service.deletar(id);
+            return ResponseEntity.ok(ApiResponse.ok(null, "Permissão removida com sucesso"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
+        }
     }
-
 }
