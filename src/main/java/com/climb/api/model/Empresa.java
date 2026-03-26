@@ -6,8 +6,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.validator.constraints.br.CNPJ;
 
 @Getter
 @Setter
@@ -26,7 +28,9 @@ public class Empresa {
     @Column(name = "nome_fantasia", nullable = false)
     private String nomeFantasia;
 
-    @Column(name = "cnpj", length = 18, nullable = false)
+    @CNPJ
+    @NotBlank
+    @Column(name = "cnpj", length = 18, nullable = false, unique = true)
     private String cnpj;
 
     @Column(name = "logradouro")

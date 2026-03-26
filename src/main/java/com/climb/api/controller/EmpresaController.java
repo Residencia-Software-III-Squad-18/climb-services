@@ -1,7 +1,11 @@
 package com.climb.api.controller;
 
-import com.climb.api.model.Empresa;
+import com.climb.api.model.dto.EmpresaRequestDTO;
+import com.climb.api.model.dto.EmpresaResponseDTO;
 import com.climb.api.service.EmpresaService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,27 +21,28 @@ public class EmpresaController {
     }
 
     @GetMapping
-    public List<Empresa> listar() {
-        return service.listar();
+    public ResponseEntity<List<EmpresaResponseDTO>> listar() {
+        return ResponseEntity.ok(service.listar());
     }
 
     @GetMapping("/{id}")
-    public Empresa buscarPorId(@PathVariable Long id) {
-        return service.buscarPorId(id);
+    public ResponseEntity<EmpresaResponseDTO> buscarPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(service.buscarPorId(id));
     }
 
     @PostMapping
-    public Empresa criar(@RequestBody Empresa empresa) {
-        return service.criar(empresa);
+    public ResponseEntity<EmpresaResponseDTO> criar(@Valid @RequestBody EmpresaRequestDTO empresaRequestDto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(empresaRequestDto));
     }
 
     @PutMapping("/{id}")
-    public Empresa atualizar(@PathVariable Long id, @RequestBody Empresa empresaAtualizada) {
-        return service.atualizar(id, empresaAtualizada);
+    public ResponseEntity<EmpresaResponseDTO> atualizar(@PathVariable Long id, @Valid @RequestBody EmpresaRequestDTO empresaRequestDto) {
+        return ResponseEntity.ok(service.atualizar(id, empresaRequestDto));
     }
 
     @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
+    public ResponseEntity<Void> deletar(@PathVariable Long id) {
         service.deletar(id);
+        return ResponseEntity.noContent().build();
     }
 }

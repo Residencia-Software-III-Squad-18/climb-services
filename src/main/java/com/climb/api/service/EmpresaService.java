@@ -1,81 +1,83 @@
 package com.climb.api.service;
 
-import java.util.List;
-
-import org.springframework.stereotype.Service;
-
+import com.climb.api.mapper.EmpresaMapper;
 import com.climb.api.model.Empresa;
+import com.climb.api.model.dto.EmpresaRequestDTO;
+import com.climb.api.model.dto.EmpresaResponseDTO;
 import com.climb.api.repository.EmpresaRepository;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.net.http.HttpResponse;
+import java.util.List;
 
 @Service
 public class EmpresaService {
 
     private final EmpresaRepository repository;
+    private final EmpresaMapper empresaMapper;
 
-    public EmpresaService(EmpresaRepository repository) {
+    public EmpresaService(EmpresaRepository repository, EmpresaMapper empresaMapper) {
         this.repository = repository;
+        this.empresaMapper = empresaMapper;
     }
 
-    public List<Empresa> listar() {
-        return repository.findAll();
+    public List<EmpresaResponseDTO> listar() {
+        return empresaMapper.toResponseDto(repository.findAll());
     }
 
-    public Empresa buscarPorId(Long id) {
-        return repository.findById(id)
+    public EmpresaResponseDTO buscarPorId(Long id) {
+        Empresa empresa = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
+        return empresaMapper.toResponseDto(empresa);
     }
 
-    public Empresa criar(Empresa empresa) {
+    public EmpresaResponseDTO criar(EmpresaRequestDTO empresaRequestDto) {
 
-        if (empresa.getRazaoSocial() == null || empresa.getRazaoSocial().isEmpty()) {
-            throw new RuntimeException("Razão social é obrigatória");
+        if (repository.findByCnpj(empresaRequestDto.cnpj()).isPresent()) {
+                throw new ResponseStatusException(
+                    HttpStatus.ALREADY_REPORTED, "CNPJ já cadastrado"
+                );
         }
 
-        if (empresa.getNomeFantasia() == null || empresa.getNomeFantasia().isEmpty()) {
-            throw new RuntimeException("Nome fantasia é obrigatório");
-        }
-
-        if (empresa.getCnpj() == null || empresa.getCnpj().isEmpty()) {
-            throw new RuntimeException("CNPJ é obrigatório");
-        }
-
-        if (repository.findByCnpj(empresa.getCnpj()).isPresent()) {
-            throw new RuntimeException("CNPJ já cadastrado");
-        }
-
-        return repository.save(empresa);
+        Empresa empresa = empresaMapper.toEntity(empresaRequestDto);
+        return empresaMapper.toResponseDto(repository.save(empresa));
     }
 
-    public Empresa atualizar(Long id, Empresa atualizada) {
+    public EmpresaResponseDTO atualizar(Long id, EmpresaRequestDTO atualizada) {
 
-        Empresa empresa = buscarPorId(id);
+        Empresa empresa = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
 
-        repository.findByCnpj(atualizada.getCnpj()).ifPresent(e -> {
+        repository.findByCnpj(atualizada.cnpj()).ifPresent(e -> {
             if (!e.getIdEmpresa().equals(id)) {
                 throw new RuntimeException("CNPJ já em uso");
             }
         });
 
-        empresa.setRazaoSocial(atualizada.getRazaoSocial());
-        empresa.setNomeFantasia(atualizada.getNomeFantasia());
-        empresa.setCnpj(atualizada.getCnpj());
-        empresa.setLogradouro(atualizada.getLogradouro());
-        empresa.setNumero(atualizada.getNumero());
-        empresa.setBairro(atualizada.getBairro());
-        empresa.setCidade(atualizada.getCidade());
-        empresa.setUf(atualizada.getUf());
-        empresa.setCep(atualizada.getCep());
-        empresa.setTelefone(atualizada.getTelefone());
-        empresa.setEmail(atualizada.getEmail());
-        empresa.setRepresentanteNome(atualizada.getRepresentanteNome());
-        empresa.setRepresentanteCpf(atualizada.getRepresentanteCpf());
-        empresa.setRepresentanteContato(atualizada.getRepresentanteContato());
+        empresa.setRazaoSocial(atualizada.razaoSocial());
+        empresa.setNomeFantasia(atualizada.nomeFantasia());
+        empresa.setCnpj(atualizada.cnpj());
+        empresa.setLogradouro(atualizada.logradouro());
+        empresa.setNumero(atualizada.numero());
+        empresa.setBairro(atualizada.bairro());
+        empresa.setCidade(atualizada.cidade());
+        empresa.setUf(atualizada.uf());
+        empresa.setCep(atualizada.cep());
+        empresa.setTelefone(atualizada.telefone());
+        empresa.setEmail(atualizada.email());
+        empresa.setRepresentanteNome(atualizada.representanteNome());
+        empresa.setRepresentanteCpf(atualizada.representanteCpf());
+        empresa.setRepresentanteContato(atualizada.representanteContato());
 
-        return repository.save(empresa);
+        return empresaMapper.toResponseDto(repository.save(empresa));
     }
 
     public void deletar(Long id) {
-        Empresa empresa = buscarPorId(id);
+        Empresa empresa = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
         repository.delete(empresa);
     }
 }
