@@ -11,9 +11,11 @@ import com.climb.api.repository.UsuarioRepository;
 public class UsuarioService {
 
     private final UsuarioRepository repository;
+    private final EmailService emailService;
 
-    public UsuarioService(UsuarioRepository repository) {
+    public UsuarioService(UsuarioRepository repository, EmailService emailService) {
         this.repository = repository;
+        this.emailService = emailService;
     }
 
     public List<Usuario> listar() {
@@ -50,8 +52,10 @@ public class UsuarioService {
         if (usuario.getSituacao() != "ATIVO" && usuario.getSituacao() != "INATIVO") {
             usuario.setSituacao("ATIVO");
         }
-
-        return repository.save(usuario);
+        
+        Usuario salvo = repository.save(usuario);
+        emailService.enviarEmailBoasVindas(salvo.getEmail(), salvo.getNomeCompleto());
+        return salvo;
     }
 
     public Usuario atualizar(Long id, Usuario atualizado) {
