@@ -9,6 +9,6 @@ public class UsuarioResponseDTO {
     private String cpf;
     private String email;
     private String contato;
-    private Boolean ativo;
+    private String situacao;
     private String cargoNome;
 }
