@@ -13,3 +13,10 @@ management:
     web:
       exposure:
         include: health,info,metrics
+
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-change-in-production-minimum-256-bits-long}
+  expiration:
+    access-token: 900000  # 15 minutes in milliseconds
+    refresh-token: 604800000  # 7 days in milliseconds
+  issuer: climb-api

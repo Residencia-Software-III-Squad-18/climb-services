@@ -60,6 +60,10 @@ public class UsuarioService {
         return toResponseDTO(usuario);
     }
 
+    public Usuario buscarPorEmail(String email) {
+        return repository.findByEmail(email).orElse(null);
+    }
+
     public UsuarioResponseDTO criar(UsuarioRequestDTO dto) {
 
         if (dto.getNomeCompleto() == null || dto.getNomeCompleto().isEmpty()) {
