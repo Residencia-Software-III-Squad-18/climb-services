@@ -20,48 +20,32 @@ public class AuthenticationService {
     }
 
     public LoginResponseDTO autenticar(String email, String senha) {
-        // Find user by email
         Usuario usuario = usuarioService.buscarPorEmail(email);
+        validarUsuarioAtivo(usuario, "Email ou senha invalidos");
 
-        // Validate user exists
-        if (usuario == null) {
-            throw new RuntimeException("Email ou senha inválidos");
-        }
-
-        // Validate user is active
-        if (!"ATIVO".equals(usuario.getSituacao())) {
-            throw new RuntimeException("Usuário inativo");
-        }
-
-        // Validate password
         if (!passwordEncoder.matches(senha, usuario.getSenhaHash())) {
-            throw new RuntimeException("senha inválida");
+            throw new RuntimeException("Senha invalida");
         }
 
-        // Generate tokens
-        String accessToken = jwtUtil.generateAccessToken(usuario.getId(), usuario.getEmail());
-        String refreshToken = jwtUtil.generateRefreshToken(usuario.getId(), usuario.getEmail());
+        return gerarRespostaLogin(usuario);
+    }
 
-        // Build response
-        UsuarioResponseDTO usuarioDTO = buildUsuarioResponseDTO(usuario);
-        long expiresIn = jwtUtil.getAccessTokenExpirationTime();
-
-        return new LoginResponseDTO(accessToken, refreshToken, usuarioDTO, expiresIn);
+    public LoginResponseDTO autenticarComGoogle(String email) {
+        Usuario usuario = usuarioService.buscarPorEmail(email);
+        validarUsuarioAtivo(usuario, "Usuario nao cadastrado para login com Google");
+        return gerarRespostaLogin(usuario);
     }
 
     public String refreshAccessToken(String refreshToken) {
-        // Validate refresh token
         if (!jwtUtil.validateToken(refreshToken)) {
-            throw new RuntimeException("Refresh token inválido ou expirado");
+            throw new RuntimeException("Refresh token invalido ou expirado");
         }
 
-        // Check token type
         String tokenType = jwtUtil.extractTokenType(refreshToken);
         if (!"refresh".equals(tokenType)) {
-            throw new RuntimeException("Token fornecido não é um refresh token");
+            throw new RuntimeException("Token fornecido nao e um refresh token");
         }
 
-        // Extract user info and generate new access token
         Long usuarioId = jwtUtil.extractUserId(refreshToken);
         String email = jwtUtil.extractEmail(refreshToken);
 
@@ -82,5 +66,24 @@ public class AuthenticationService {
         }
 
         return dto;
+    }
+
+    private void validarUsuarioAtivo(Usuario usuario, String usuarioNaoEncontradoMessage) {
+        if (usuario == null) {
+            throw new RuntimeException(usuarioNaoEncontradoMessage);
+        }
+
+        if (!"ATIVO".equals(usuario.getSituacao())) {
+            throw new RuntimeException("Usuario inativo");
+        }
+    }
+
+    private LoginResponseDTO gerarRespostaLogin(Usuario usuario) {
+        String accessToken = jwtUtil.generateAccessToken(usuario.getId(), usuario.getEmail());
+        String refreshToken = jwtUtil.generateRefreshToken(usuario.getId(), usuario.getEmail());
+        UsuarioResponseDTO usuarioDTO = buildUsuarioResponseDTO(usuario);
+        long expiresIn = jwtUtil.getAccessTokenExpirationTime();
+
+        return new LoginResponseDTO(accessToken, refreshToken, usuarioDTO, expiresIn);
     }
 }
