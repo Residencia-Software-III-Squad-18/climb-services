@@ -3,6 +3,17 @@ spring:
     name: climb-api
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope:
+              - openid
+              - profile
+              - email
 
 server:
   port: 8080
@@ -17,8 +28,8 @@ management:
 jwt:
   secret: ${JWT_SECRET:your-secret-key-change-in-production-minimum-256-bits-long}
   expiration:
-    access-token: 900000  # 15 minutes in milliseconds
-    refresh-token: 604800000  # 7 days in milliseconds
+    access-token: 900000
+    refresh-token: 604800000
   issuer: climb-api
 
 google:
