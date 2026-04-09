@@ -1,15 +1,19 @@
 package com.climb.api.controller;
 
 import com.climb.api.model.dto.ApiResponse;
+import com.climb.api.model.dto.CompleteGoogleRegistrationRequestDTO;
 import com.climb.api.model.dto.GoogleAuthorizationUrlResponseDTO;
 import com.climb.api.model.dto.LoginRequestDTO;
 import com.climb.api.model.dto.LoginResponseDTO;
 import com.climb.api.model.dto.RefreshTokenRequestDTO;
+import com.climb.api.config.OAuth2AuthenticationSuccessHandler;
 import com.climb.api.service.AuthenticationService;
 import com.climb.api.service.GoogleOAuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -96,5 +100,43 @@ public class AuthController {
     @GetMapping("/google")
     public RedirectView googleLogin() {
         return new RedirectView("/oauth2/authorization/google");
+    }
+
+    @PostMapping("/google/complete-registration")
+    public ResponseEntity<ApiResponse<LoginResponseDTO>> completeGoogleRegistration(
+            @RequestBody CompleteGoogleRegistrationRequestDTO dto) {
+        try {
+            LoginResponseDTO response = googleOAuthService.concluirCadastro(dto);
+            return ResponseEntity.ok(ApiResponse.ok(response, "Cadastro Google concluido com sucesso"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/google/link")
+    public RedirectView googleLink(Authentication authentication, HttpServletRequest request) {
+        Long usuarioId = extractAuthenticatedUserId(authentication);
+        request.getSession(true).setAttribute(
+                OAuth2AuthenticationSuccessHandler.GOOGLE_LINK_USER_ID_SESSION_KEY,
+                usuarioId
+        );
+        return new RedirectView("/oauth2/authorization/google");
+    }
+
+    private Long extractAuthenticatedUserId(Authentication authentication) {
+        if (authentication == null || authentication.getDetails() == null) {
+            throw new RuntimeException("Usuario nao autenticado");
+        }
+
+        Object details = authentication.getDetails();
+        if (details instanceof Long longValue) {
+            return longValue;
+        }
+
+        if (details instanceof Number numberValue) {
+            return numberValue.longValue();
+        }
+
+        throw new RuntimeException("Nao foi possivel identificar o usuario autenticado");
     }
 }
