@@ -68,7 +68,7 @@ public class AuthenticationService {
         return dto;
     }
 
-    private void validarUsuarioAtivo(Usuario usuario, String usuarioNaoEncontradoMessage) {
+    public void validarUsuarioAtivo(Usuario usuario, String usuarioNaoEncontradoMessage) {
         if (usuario == null) {
             throw new RuntimeException(usuarioNaoEncontradoMessage);
         }
@@ -78,7 +78,8 @@ public class AuthenticationService {
         }
     }
 
-    private LoginResponseDTO gerarRespostaLogin(Usuario usuario) {
+    public LoginResponseDTO gerarRespostaLogin(Usuario usuario) {
+        validarUsuarioAtivo(usuario, "Usuario nao encontrado");
         String accessToken = jwtUtil.generateAccessToken(usuario.getId(), usuario.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(usuario.getId(), usuario.getEmail());
         UsuarioResponseDTO usuarioDTO = buildUsuarioResponseDTO(usuario);
