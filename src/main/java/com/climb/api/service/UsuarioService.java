@@ -64,6 +64,54 @@ public class UsuarioService {
         return repository.findByEmail(email).orElse(null);
     }
 
+    public Usuario criarViaGoogle(String nomeCompleto, String email, String cpf, String contato, String senha, Long cargoId) {
+        if (nomeCompleto == null || nomeCompleto.isBlank()) {
+            throw new RuntimeException("Nome e obrigatorio");
+        }
+
+        if (cpf == null || cpf.isBlank()) {
+            throw new RuntimeException("CPF e obrigatorio");
+        }
+
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Email e obrigatorio");
+        }
+
+        if (contato == null || contato.isBlank()) {
+            throw new RuntimeException("Contato e obrigatorio");
+        }
+
+        if (senha == null || senha.isBlank()) {
+            throw new RuntimeException("Senha e obrigatoria");
+        }
+
+        if (cargoId == null) {
+            throw new RuntimeException("Cargo e obrigatorio");
+        }
+
+        if (repository.findByCpf(cpf).isPresent()) {
+            throw new RuntimeException("CPF ja cadastrado");
+        }
+
+        if (repository.findByEmail(email).isPresent()) {
+            throw new RuntimeException("Email ja cadastrado");
+        }
+
+        Cargo cargo = cargoRepository.findById(cargoId)
+                .orElseThrow(() -> new RuntimeException("Cargo nao encontrado"));
+
+        Usuario usuario = new Usuario();
+        usuario.setNomeCompleto(nomeCompleto);
+        usuario.setCpf(cpf);
+        usuario.setEmail(email);
+        usuario.setContato(contato);
+        usuario.setSituacao("ATIVO");
+        usuario.setCargo(cargo);
+        usuario.setSenhaHash(passwordEncoder.encode(senha));
+
+        return repository.save(usuario);
+    }
+
     public UsuarioResponseDTO criar(UsuarioRequestDTO dto) {
 
         if (dto.getNomeCompleto() == null || dto.getNomeCompleto().isEmpty()) {
