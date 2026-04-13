@@ -50,6 +50,15 @@ Para usar uma porta diferente:
 ./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=9090"
 ```
 
+### Rodar com Docker Compose
+
+Para garantir que o container use o código mais recente:
+
+```bash
+docker compose build --no-cache climb-api
+docker compose up -d --force-recreate climb-api
+```
+
 ### Gerar o JAR
 
 ```bash
@@ -69,10 +78,28 @@ lsof -ti:8080 | xargs kill -9
 
 | Método | URL | Descrição |
 |---|---|---|
-| `GET` | `/api/hello` | Retorna "Hello, World!" |
+| `POST` | `/auth/login` | Autentica usuário com `email` e `senha` |
+| `POST` | `/auth/refresh` | Renova token de acesso |
+| `GET` | `/hello` | Endpoint de teste |
 | `GET` | `/actuator/health` | Status da aplicação |
 | `GET` | `/actuator/info` | Informações da aplicação |
 | `GET` | `/actuator/metrics` | Métricas disponíveis |
+
+### Exemplo de login
+
+```bash
+curl -X POST http://localhost:8080/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"usuario@exemplo.com","senha":"123456"}'
+```
+
+### Solução rápida para `404` em `/auth/login`
+
+Se `/hello` responde e `/auth/login` retorna `404`, normalmente o container está com imagem antiga.
+
+1. Rebuild da API sem cache.
+2. Recrie o container da API.
+3. Teste novamente com `POST /auth/login` e corpo JSON.
 
 ## Estrutura do projeto
 
