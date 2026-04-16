@@ -38,6 +38,9 @@ public class Reuniao {
     @Column(name = "status")
     private String status;
 
+    @Column(name = "google_event_id")
+    private String googleEventId;
+
     public Long getIdReuniao() { return idReuniao; }
     public void setIdReuniao(Long idReuniao) { this.idReuniao = idReuniao; }
 
@@ -64,4 +67,7 @@ public class Reuniao {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getGoogleEventId() { return googleEventId; }
+    public void setGoogleEventId(String googleEventId) { this.googleEventId = googleEventId; }
 }

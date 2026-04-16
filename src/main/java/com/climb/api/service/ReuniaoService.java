@@ -2,6 +2,8 @@ package com.climb.api.service;
 
 import com.climb.api.model.Reuniao;
 import com.climb.api.repository.ReuniaoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -9,10 +11,14 @@ import java.util.List;
 @Service
 public class ReuniaoService {
 
-    private final ReuniaoRepository repository;
+    private static final Logger log = LoggerFactory.getLogger(ReuniaoService.class);
 
-    public ReuniaoService(ReuniaoRepository repository) {
+    private final ReuniaoRepository repository;
+    private final GoogleCalendarService googleCalendarService;
+
+    public ReuniaoService(ReuniaoRepository repository, GoogleCalendarService googleCalendarService) {
         this.repository = repository;
+        this.googleCalendarService = googleCalendarService;
     }
 
     public List<Reuniao> listar() {
@@ -28,7 +34,7 @@ public class ReuniaoService {
         return repository.findByEmpresa_IdEmpresa(empresaId);
     }
 
-    public Reuniao criar(Reuniao reuniao) {
+    public Reuniao criar(Reuniao reuniao, String accessToken) throws Exception {
 
         if (reuniao.getTitulo() == null || reuniao.getTitulo().isEmpty()) {
             throw new RuntimeException("Título é obrigatório");
@@ -38,7 +44,17 @@ public class ReuniaoService {
             throw new RuntimeException("Empresa é obrigatória");
         }
 
-        return repository.save(reuniao);
+        Reuniao salva = repository.save(reuniao);
+
+        try {
+            String googleEventId = googleCalendarService.criarEvento(salva, accessToken);
+            salva.setGoogleEventId(googleEventId);
+            repository.save(salva);
+        } catch (Exception e) {
+            log.warn("Falha ao criar evento no Google Calendar para reunião {}: {}", salva.getIdReuniao(), e.getMessage());
+        }
+
+        return salva;
     }
 
     public Reuniao atualizar(Long id, Reuniao atualizada) {

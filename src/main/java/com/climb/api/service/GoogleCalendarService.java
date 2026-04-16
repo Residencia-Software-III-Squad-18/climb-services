@@ -1,0 +1,75 @@
+package com.climb.api.service;
+
+import com.climb.api.model.Reuniao;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.calendar.Calendar;
+import com.google.api.services.calendar.CalendarScopes;
+import com.google.api.services.calendar.model.*;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.GoogleCredentials;
+import org.springframework.stereotype.Service;
+import com.google.api.client.util.DateTime;
+
+import java.util.List;
+import java.util.UUID;
+
+@Service
+public class GoogleCalendarService {
+
+    public String criarEvento(Reuniao reuniao, String accessToken) throws Exception {
+
+        GoogleCredentials credentials = GoogleCredentials
+                .create(new AccessToken(accessToken, null))
+                .createScoped(List.of(CalendarScopes.CALENDAR));
+
+        Calendar service = new Calendar.Builder(
+                GoogleNetHttpTransport.newTrustedTransport(),
+                GsonFactory.getDefaultInstance(),
+                new HttpCredentialsAdapter(credentials))
+                .setApplicationName("Climbe")
+                .build();
+
+        Event event = new Event()
+                .setSummary(reuniao.getTitulo())
+                .setDescription(reuniao.getPauta());
+
+        String dataHora = reuniao.getData() + "T" + reuniao.getHora() + ":00";
+        DateTime dateTime = new DateTime(dataHora);
+        EventDateTime eventDateTime = new EventDateTime().setDateTime(dateTime);
+        event.setStart(eventDateTime);
+        event.setEnd(eventDateTime);
+
+        if (Boolean.FALSE.equals(reuniao.getPresencial())) {
+            ConferenceSolutionKey key = new ConferenceSolutionKey().setType("hangoutsMeet");
+            CreateConferenceRequest req = new CreateConferenceRequest()
+                    .setRequestId(UUID.randomUUID().toString())
+                    .setConferenceSolutionKey(key);
+            event.setConferenceData(new ConferenceData().setCreateRequest(req));
+        }
+
+        Event created = service.events()
+                .insert("primary", event)
+                .setConferenceDataVersion(1)
+                .execute();
+
+        return created.getId();
+    }
+
+    public void deletarEvento(String googleEventId, String accessToken) throws Exception {
+
+        GoogleCredentials credentials = GoogleCredentials
+                .create(new AccessToken(accessToken, null))
+                .createScoped(List.of(CalendarScopes.CALENDAR));
+
+        Calendar service = new Calendar.Builder(
+                GoogleNetHttpTransport.newTrustedTransport(),
+                GsonFactory.getDefaultInstance(),
+                new HttpCredentialsAdapter(credentials))
+                .setApplicationName("Climbe")
+                .build();
+
+        service.events().delete("primary", googleEventId).execute();
+    }
+}
