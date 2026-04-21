@@ -20,3 +20,9 @@ jwt:
     access-token: 900000  # 15 minutes in milliseconds
     refresh-token: 604800000  # 7 days in milliseconds
   issuer: climb-api
+
+google:
+  calendar:
+    client-id: ${GOOGLE_CALENDAR_CLIENT_ID:}
+    client-secret: ${GOOGLE_CALENDAR_CLIENT_SECRET:}
+    redirect-uri: ${GOOGLE_CALENDAR_REDIRECT_URI:}
