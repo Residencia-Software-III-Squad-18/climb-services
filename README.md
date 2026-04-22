@@ -101,6 +101,31 @@ Se `/hello` responde e `/auth/login` retorna `404`, normalmente o container est√
 2. Recrie o container da API.
 3. Teste novamente com `POST /auth/login` e corpo JSON.
 
+## Google Calendar OAuth
+
+Defina estas vari√°veis no `.env` para habilitar o fluxo:
+
+```env
+GOOGLE_CALENDAR_CLIENT_ID=...
+GOOGLE_CALENDAR_CLIENT_SECRET=...
+GOOGLE_CALENDAR_REDIRECT_URI=http://localhost:8080/auth/google/callback
+GOOGLE_CALENDAR_FRONTEND_URL=http://localhost:5173
+```
+
+Endpoints adicionais:
+
+- `GET /auth/google/url`
+- `GET /auth/google/callback`
+
+Fluxo:
+
+1. Chame `GET /auth/google/url`.
+2. O backend responde JSON simples com o campo `authorizationUrl`.
+3. Abra a `authorizationUrl` retornada no navegador e conclua o consentimento.
+4. O Google redireciona para `GET /auth/google/callback`.
+5. A API troca o `code` por token e redireciona de volta para `GOOGLE_CALENDAR_FRONTEND_URL`.
+6. Os dados do OAuth retornam no fragmento da URL, por exemplo `#google_oauth=success&google_access_token=...`.
+
 ## Estrutura do projeto
 
 ```

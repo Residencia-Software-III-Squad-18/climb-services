@@ -46,6 +46,11 @@ public class ReuniaoService {
 
         Reuniao salva = repository.save(reuniao);
 
+        if (accessToken == null || accessToken.isBlank()) {
+            log.info("Reuniao {} criada sem integracao com Google Calendar por ausencia de token", salva.getIdReuniao());
+            return salva;
+        }
+
         try {
             String googleEventId = googleCalendarService.criarEvento(salva, accessToken);
             salva.setGoogleEventId(googleEventId);

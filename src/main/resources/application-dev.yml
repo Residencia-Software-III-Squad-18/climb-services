@@ -10,8 +10,9 @@ spring:
       ddl-auto: update
     show-sql: true
 
-  google:
+google:
   calendar:
-    client-id: ${GOOGLE_CLIENT_ID}
-    client-secret: ${GOOGLE_CLIENT_SECRET}
-    redirect-uri: ${GOOGLE_REDIRECT_URI}
+    client-id: ${GOOGLE_CALENDAR_CLIENT_ID:}
+    client-secret: ${GOOGLE_CALENDAR_CLIENT_SECRET:}
+    redirect-uri: ${GOOGLE_CALENDAR_REDIRECT_URI:}
+    frontend-url: ${GOOGLE_CALENDAR_FRONTEND_URL:http://localhost:5173}

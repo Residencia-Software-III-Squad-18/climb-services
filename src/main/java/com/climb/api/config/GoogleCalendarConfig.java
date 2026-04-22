@@ -22,9 +22,13 @@ public class GoogleCalendarConfig {
     @Value("${google.calendar.redirect-uri:}")
     private String redirectUri;
 
+    @Value("${google.calendar.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
     public String getClientId()     { return clientId; }
     public String getClientSecret() { return clientSecret; }
     public String getRedirectUri()  { return redirectUri; }
+    public String getFrontendUrl()  { return frontendUrl; }
 
     public boolean isEnabled() {
         return clientId != null && !clientId.isBlank();

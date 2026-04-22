@@ -2,8 +2,6 @@ package com.climb.api.controller;
 
 import com.climb.api.model.Reuniao;
 import com.climb.api.service.ReuniaoService;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,10 +34,8 @@ public class ReuniaoController {
     @PostMapping
     public Reuniao criar(
             @RequestBody Reuniao reuniao,
-            @RegisteredOAuth2AuthorizedClient("google") OAuth2AuthorizedClient authorizedClient) throws Exception {
-
-        String accessToken = authorizedClient.getAccessToken().getTokenValue();
-        return service.criar(reuniao, accessToken);
+            @RequestHeader(value = "X-Google-Access-Token", required = false) String googleAccessToken) throws Exception {
+        return service.criar(reuniao, googleAccessToken);
     }
 
     @PutMapping("/{id}")
