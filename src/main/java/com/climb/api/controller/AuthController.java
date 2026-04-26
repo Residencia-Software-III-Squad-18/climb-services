@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -28,9 +30,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponseDTO>> login(@RequestBody LoginRequestDTO dto) {
         try {
             LoginResponseDTO response = authenticationService.autenticar(dto.getEmail(), dto.getSenha());
-            return ResponseEntity.status(200).body(ApiResponse.ok(response, "Login realizado com sucesso"));
+            return ResponseEntity.ok(ApiResponse.ok(response, "Login realizado com sucesso"));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body(ApiResponse.error(e.getMessage()));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(e.getMessage()));
         }
     }
 
@@ -40,7 +42,7 @@ public class AuthController {
             String newAccessToken = authenticationService.refreshAccessToken(dto.getRefreshToken());
             return ResponseEntity.ok(ApiResponse.ok(newAccessToken, "Token renovado com sucesso"));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body(ApiResponse.error(e.getMessage()));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(e.getMessage()));
         }
     }
 
@@ -60,25 +62,28 @@ public class AuthController {
             @RequestParam(required = false) String error) {
         try {
             if (error != null && !error.isBlank()) {
-                return ResponseEntity.status(HttpStatus.FOUND)
-                        .header(HttpHeaders.LOCATION, googleOAuthService.gerarRedirecionamentoErro("Google retornou erro: " + error).toString())
-                        .build();
+                URI redirectUri = googleOAuthService.gerarRedirecionamentoErro("Google retornou erro: " + error);
+                return redirect(redirectUri);
             }
 
             if (code == null || code.isBlank()) {
-                return ResponseEntity.status(HttpStatus.FOUND)
-                        .header(HttpHeaders.LOCATION, googleOAuthService.gerarRedirecionamentoErro("Parametro code e obrigatorio").toString())
-                        .build();
+                URI redirectUri = googleOAuthService.gerarRedirecionamentoErro("Parametro code e obrigatorio");
+                return redirect(redirectUri);
             }
 
             var response = googleOAuthService.trocarCodePorToken(code);
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .header(HttpHeaders.LOCATION, googleOAuthService.gerarRedirecionamentoFrontend(response).toString())
-                    .build();
+            URI redirectUri = googleOAuthService.gerarRedirecionamentoFrontend(response);
+            return redirect(redirectUri);
+
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .header(HttpHeaders.LOCATION, googleOAuthService.gerarRedirecionamentoErro(e.getMessage()).toString())
-                    .build();
+            URI redirectUri = googleOAuthService.gerarRedirecionamentoErro(e.getMessage());
+            return redirect(redirectUri);
         }
+    }
+
+    private ResponseEntity<Void> redirect(URI uri) {
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, uri.toASCIIString())
+                .build();
     }
 }

@@ -7,7 +7,7 @@ spring:
   # Flyway excluído da app - migrations rodam apenas no container dedicado no deploy
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
 
 google:
@@ -16,3 +16,4 @@ google:
     client-secret: ${GOOGLE_CALENDAR_CLIENT_SECRET:}
     redirect-uri: ${GOOGLE_CALENDAR_REDIRECT_URI:}
     frontend-url: ${GOOGLE_CALENDAR_FRONTEND_URL:http://localhost:5173}
+    allowed-domain: ${GOOGLE_CALENDAR_ALLOWED_DOMAIN:}

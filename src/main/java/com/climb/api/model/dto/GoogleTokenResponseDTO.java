@@ -5,6 +5,10 @@ public record GoogleTokenResponseDTO(
         String refreshToken,
         String tokenType,
         Long expiresIn,
-        String scope
+        String scope,
+        String appAccessToken,
+        String appRefreshToken,
+        Long appExpiresIn,
+        UsuarioResponseDTO usuario
 ) {
 }

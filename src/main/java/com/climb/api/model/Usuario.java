@@ -36,7 +36,7 @@ public class Usuario {
     @Transient
     private String senha;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     private String situacao;
 
     @ManyToOne
