@@ -4,6 +4,7 @@ import com.climb.api.mapper.DocumentoMapper;
 import com.climb.api.model.Documento;
 import com.climb.api.model.dto.DocumentoResponseDTO;
 import com.climb.api.model.dto.DocumentoSolicitacaoRequestDTO;
+import com.climb.api.model.dto.DocumentoValidacaoRequestDTO;
 import com.climb.api.repository.DocumentoRepository;
 import com.climb.api.repository.EmpresaRepository;
 import com.climb.api.repository.UsuarioRepository;
@@ -27,10 +28,7 @@ public class DocumentoService {
     private final UsuarioRepository usuarioRepository;
     private final DocumentoMapper documentoMapper;
 
-    public DocumentoService(DocumentoRepository documentoRepository,
-                            EmpresaRepository empresaRepository,
-                            UsuarioRepository usuarioRepository,
-                            DocumentoMapper documentoMapper) {
+    public DocumentoService(DocumentoRepository documentoRepository, EmpresaRepository empresaRepository, UsuarioRepository usuarioRepository, DocumentoMapper documentoMapper) {
         this.documentoRepository = documentoRepository;
         this.empresaRepository   = empresaRepository;
         this.usuarioRepository   = usuarioRepository;
@@ -66,40 +64,21 @@ public class DocumentoService {
         return documentoMapper.toResponseDto(documentoRepository.save(documento));
     }
 
-    public DocumentoResponseDTO enviar(Long id, MultipartFile arquivo) {
+    public DocumentoResponseDTO validar(Long id, DocumentoValidacaoRequestDTO dto) {
         Documento documento = documentoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado: " + id));
 
-        documento.setUrl(salvarArquivo(arquivo));
-        documento.setValidado("EM_ANALISE");
+        documento.setValidado(dto.validado());
 
         return documentoMapper.toResponseDto(documentoRepository.save(documento));
     }
+
+
 
     public void deletar(Long id) {
         if (!documentoRepository.existsById(id)) {
             throw new EntityNotFoundException("Documento não encontrado: " + id);
         }
         documentoRepository.deleteById(id);
-    }
-
-    // --- helpers ---
-
-    private String salvarArquivo(MultipartFile arquivo) {
-        try {
-            Path pasta = Paths.get("uploads/documentos");
-
-            if (!Files.exists(pasta)) {
-                Files.createDirectories(pasta);
-            }
-
-            String nomeArquivo = UUID.randomUUID() + "_" + arquivo.getOriginalFilename();
-            Path destino = pasta.resolve(nomeArquivo);
-            Files.copy(arquivo.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
-
-            return destino.toString();
-        } catch (IOException e) {
-            throw new RuntimeException("Erro ao salvar arquivo: " + e.getMessage());
-        }
     }
 }
