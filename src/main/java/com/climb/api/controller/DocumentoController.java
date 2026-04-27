@@ -1,43 +1,72 @@
 package com.climb.api.controller;
 
-import com.climb.api.model.Documento;
+import com.climb.api.model.dto.DocumentoResponseDTO;
+import com.climb.api.model.dto.DocumentoSolicitacaoRequestDTO;
 import com.climb.api.service.DocumentoService;
+import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
 @RequestMapping("/documentos")
 public class DocumentoController {
 
-    private final DocumentoService service;
+    private final DocumentoService documentoService;
 
-    public DocumentoController(DocumentoService service) {
-        this.service = service;
+    public DocumentoController(DocumentoService documentoService) {
+        this.documentoService = documentoService;
     }
 
     @GetMapping
-    public List<Documento> listar() {
-        return service.listar();
+    public ResponseEntity<List<DocumentoResponseDTO>> listar() {
+        List<DocumentoResponseDTO> lista = documentoService.listar();
+        return ResponseEntity.ok(lista);
+    }
+
+    @GetMapping("/empresa/{empresaId}")
+    public ResponseEntity<List<DocumentoResponseDTO>> listarPorEmpresa(
+            @PathVariable Long empresaId) {
+        List<DocumentoResponseDTO> lista = documentoService.listarPorEmpresa(empresaId);
+        return ResponseEntity.ok(lista);
     }
 
     @GetMapping("/{id}")
-    public Documento buscarPorId(@PathVariable Long id) {
-        return service.buscarPorId(id);
+    public ResponseEntity<DocumentoResponseDTO> buscarPorId(
+            @PathVariable Long id) {
+        DocumentoResponseDTO documento = documentoService.buscarPorId(id);
+        return ResponseEntity.ok(documento);
     }
 
-    @PostMapping
-    public Documento criar(@RequestBody Documento documento) {
-        return service.criar(documento);
+    @PostMapping("/solicitar")
+    public ResponseEntity<DocumentoResponseDTO> solicitar(
+            @Valid @RequestBody DocumentoSolicitacaoRequestDTO dto) {
+        DocumentoResponseDTO criado = documentoService.solicitar(dto);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .replacePath("/documentos/{id}")
+                .buildAndExpand(criado.id())
+                .toUri();
+        return ResponseEntity.created(location).body(criado);
     }
 
-    @PutMapping("/{id}")
-    public Documento atualizar(@PathVariable Long id, @RequestBody Documento atualizado) {
-        return service.atualizar(id, atualizado);
+    @PatchMapping(value = "/{id}/enviar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DocumentoResponseDTO> enviar(
+            @PathVariable Long id,
+            @RequestParam("arquivo") MultipartFile arquivo) {
+        DocumentoResponseDTO atualizado = documentoService.enviar(id, arquivo);
+        return ResponseEntity.ok(atualizado);
     }
 
     @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
-        service.deletar(id);
+    public ResponseEntity<Void> deletar(
+            @PathVariable Long id) {
+        documentoService.deletar(id);
+        return ResponseEntity.noContent().build();
     }
 }
