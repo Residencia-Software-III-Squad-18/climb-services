@@ -2,25 +2,23 @@ package com.climb.api.controller;
 
 import com.climb.api.model.dto.ApiResponse;
 import com.climb.api.model.dto.CompleteGoogleRegistrationRequestDTO;
+import com.climb.api.model.dto.ExchangeCodeRequestDTO;
+import com.climb.api.model.dto.ExchangeCodeResponseDTO;
 import com.climb.api.model.dto.GoogleAuthorizationUrlResponseDTO;
 import com.climb.api.model.dto.LoginRequestDTO;
 import com.climb.api.model.dto.LoginResponseDTO;
 import com.climb.api.model.dto.RefreshTokenRequestDTO;
-import com.climb.api.config.OAuth2AuthenticationSuccessHandler;
 import com.climb.api.service.AuthenticationService;
 import com.climb.api.service.GoogleOAuthService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.view.RedirectView;
 
 import java.net.URI;
 
@@ -97,11 +95,6 @@ public class AuthController {
                 .build();
     }
 
-    @GetMapping("/google")
-    public RedirectView googleLogin() {
-        return new RedirectView("/oauth2/authorization/google");
-    }
-
     @PostMapping("/google/complete-registration")
     public ResponseEntity<ApiResponse<LoginResponseDTO>> completeGoogleRegistration(
             @RequestBody CompleteGoogleRegistrationRequestDTO dto) {
@@ -113,30 +106,14 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/google/link")
-    public RedirectView googleLink(Authentication authentication, HttpServletRequest request) {
-        Long usuarioId = extractAuthenticatedUserId(authentication);
-        request.getSession(true).setAttribute(
-                OAuth2AuthenticationSuccessHandler.GOOGLE_LINK_USER_ID_SESSION_KEY,
-                usuarioId
-        );
-        return new RedirectView("/oauth2/authorization/google");
-    }
-
-    private Long extractAuthenticatedUserId(Authentication authentication) {
-        if (authentication == null || authentication.getDetails() == null) {
-            throw new RuntimeException("Usuario nao autenticado");
+    @PostMapping("/exchange")
+    public ResponseEntity<ApiResponse<ExchangeCodeResponseDTO>> exchangeCode(
+            @RequestBody ExchangeCodeRequestDTO dto) {
+        try {
+            ExchangeCodeResponseDTO response = googleOAuthService.exchangeCode(dto.code());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Tokens obtidos com sucesso"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
         }
-
-        Object details = authentication.getDetails();
-        if (details instanceof Long longValue) {
-            return longValue;
-        }
-
-        if (details instanceof Number numberValue) {
-            return numberValue.longValue();
-        }
-
-        throw new RuntimeException("Nao foi possivel identificar o usuario autenticado");
     }
 }

@@ -2,17 +2,20 @@ package com.climb.api.service;
 
 import com.climb.api.config.GoogleCalendarConfig;
 import com.climb.api.model.Cargo;
+import com.climb.api.model.OAuth2ExchangeCode;
 import com.climb.api.model.OAuth2PendingRegistration;
 import com.climb.api.model.OAuthProvider;
 import com.climb.api.model.Usuario;
 import com.climb.api.model.UsuarioOAuth;
 import com.climb.api.model.dto.CompleteGoogleRegistrationRequestDTO;
+import com.climb.api.model.dto.ExchangeCodeResponseDTO;
 import com.climb.api.model.dto.GoogleAuthorizationUrlResponseDTO;
 import com.climb.api.model.dto.GoogleOAuthResolveResponseDTO;
 import com.climb.api.model.dto.GoogleTokenResponseDTO;
 import com.climb.api.model.dto.LoginResponseDTO;
 import com.climb.api.model.dto.UsuarioResponseDTO;
 import com.climb.api.repository.CargoRepository;
+import com.climb.api.repository.OAuth2ExchangeCodeRepository;
 import com.climb.api.repository.OAuth2PendingRegistrationRepository;
 import com.climb.api.repository.UsuarioOAuthRepository;
 import com.climb.api.repository.UsuarioRepository;
@@ -27,7 +30,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -47,6 +52,9 @@ public class GoogleOAuthService {
     private static final String GOOGLE_USERINFO_URI = "https://www.googleapis.com/oauth2/v3/userinfo";
     private static final String GOOGLE_SCOPE = "openid email profile https://www.googleapis.com/auth/calendar";
 
+    private static final int EXCHANGE_CODE_EXPIRATION_SECONDS = 60;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     @org.springframework.beans.factory.annotation.Value("${google.calendar.allowed-domain:}")
     private String googleAllowedDomain;
 
@@ -58,6 +66,7 @@ public class GoogleOAuthService {
     private final RestClient restClient;
     private final UsuarioOAuthRepository usuarioOAuthRepository;
     private final OAuth2PendingRegistrationRepository pendingRegistrationRepository;
+    private final OAuth2ExchangeCodeRepository exchangeCodeRepository;
     private final AuthenticationService authenticationService;
 
     public GoogleOAuthService(
@@ -68,6 +77,7 @@ public class GoogleOAuthService {
             JwtUtil jwtUtil,
             UsuarioOAuthRepository usuarioOAuthRepository,
             OAuth2PendingRegistrationRepository pendingRegistrationRepository,
+            OAuth2ExchangeCodeRepository exchangeCodeRepository,
             AuthenticationService authenticationService
     ) {
         this.googleCalendarConfig = googleCalendarConfig;
@@ -78,6 +88,7 @@ public class GoogleOAuthService {
         this.restClient = RestClient.builder().build();
         this.usuarioOAuthRepository = usuarioOAuthRepository;
         this.pendingRegistrationRepository = pendingRegistrationRepository;
+        this.exchangeCodeRepository = exchangeCodeRepository;
         this.authenticationService = authenticationService;
     }
 
@@ -156,33 +167,85 @@ public class GoogleOAuthService {
                 && !googleCalendarConfig.getRedirectUri().isBlank();
     }
 
+    @Transactional
     public URI gerarRedirecionamentoFrontend(GoogleTokenResponseDTO tokenResponse) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(googleCalendarConfig.getFrontendUrl())
-                .queryParam("google_oauth", "success")
-                .queryParam("google_access_token", tokenResponse.accessToken());
+        limparExchangeCodesExpirados();
 
-        if (tokenResponse.refreshToken() != null) builder.queryParam("google_refresh_token", tokenResponse.refreshToken());
-        if (tokenResponse.tokenType() != null) builder.queryParam("google_token_type", tokenResponse.tokenType());
-        if (tokenResponse.expiresIn() != null) builder.queryParam("google_expires_in", tokenResponse.expiresIn());
-        if (tokenResponse.scope() != null) builder.queryParam("google_scope", tokenResponse.scope());
-        if (tokenResponse.appAccessToken() != null) builder.queryParam("app_access_token", tokenResponse.appAccessToken());
-        if (tokenResponse.appRefreshToken() != null) builder.queryParam("app_refresh_token", tokenResponse.appRefreshToken());
-        if (tokenResponse.appExpiresIn() != null) builder.queryParam("app_expires_in", tokenResponse.appExpiresIn());
+        String code = gerarCodigoSeguro();
+
+        OAuth2ExchangeCode exchangeCode = new OAuth2ExchangeCode();
+        exchangeCode.setCode(code);
+        exchangeCode.setAccessToken(tokenResponse.appAccessToken());
+        exchangeCode.setRefreshToken(tokenResponse.appRefreshToken());
+        exchangeCode.setGoogleAccessToken(tokenResponse.accessToken());
+        exchangeCode.setGoogleRefreshToken(tokenResponse.refreshToken());
+        exchangeCode.setExpiresIn(tokenResponse.appExpiresIn());
 
         if (tokenResponse.usuario() != null) {
-            builder.queryParam("app_user_id", tokenResponse.usuario().getId());
-            builder.queryParam("app_user_name", tokenResponse.usuario().getNomeCompleto());
-            builder.queryParam("app_user_email", tokenResponse.usuario().getEmail());
-            builder.queryParam("app_user_status", tokenResponse.usuario().getSituacao());
-
-            if (tokenResponse.usuario().getCargoNome() != null) {
-                builder.queryParam("app_user_role", tokenResponse.usuario().getCargoNome());
-            }
+            exchangeCode.setUserId(tokenResponse.usuario().getId());
+            exchangeCode.setUserEmail(tokenResponse.usuario().getEmail());
+            exchangeCode.setUserName(tokenResponse.usuario().getNomeCompleto());
+            exchangeCode.setUserStatus(tokenResponse.usuario().getSituacao());
+            exchangeCode.setUserRole(tokenResponse.usuario().getCargoNome());
         }
 
-        return builder.build()
+        exchangeCode.setExpiraEm(LocalDateTime.now().plusSeconds(EXCHANGE_CODE_EXPIRATION_SECONDS));
+        exchangeCode.setConsumido(false);
+        exchangeCode.setCriadoEm(LocalDateTime.now());
+
+        exchangeCodeRepository.save(exchangeCode);
+
+        return UriComponentsBuilder.fromUriString(googleCalendarConfig.getFrontendUrl())
+                .queryParam("google_oauth", "success")
+                .queryParam("code", code)
+                .build()
                 .encode(StandardCharsets.UTF_8)
                 .toUri();
+    }
+
+    @Transactional
+    public ExchangeCodeResponseDTO exchangeCode(String code) {
+        limparExchangeCodesExpirados();
+
+        OAuth2ExchangeCode exchangeCode = exchangeCodeRepository
+                .findByCodeAndConsumidoFalse(code)
+                .orElseThrow(() -> new RuntimeException("Codigo invalido ou expirado"));
+
+        if (exchangeCode.getExpiraEm().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Codigo expirado");
+        }
+
+        exchangeCode.setConsumido(true);
+        exchangeCodeRepository.save(exchangeCode);
+
+        UsuarioResponseDTO usuario = null;
+        if (exchangeCode.getUserId() != null) {
+            usuario = new UsuarioResponseDTO();
+            usuario.setId(exchangeCode.getUserId());
+            usuario.setEmail(exchangeCode.getUserEmail());
+            usuario.setNomeCompleto(exchangeCode.getUserName());
+            usuario.setSituacao(exchangeCode.getUserStatus());
+            usuario.setCargoNome(exchangeCode.getUserRole());
+        }
+
+        return new ExchangeCodeResponseDTO(
+                exchangeCode.getAccessToken(),
+                exchangeCode.getRefreshToken(),
+                exchangeCode.getExpiresIn(),
+                exchangeCode.getGoogleAccessToken(),
+                exchangeCode.getGoogleRefreshToken(),
+                usuario
+        );
+    }
+
+    private String gerarCodigoSeguro() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private void limparExchangeCodesExpirados() {
+        exchangeCodeRepository.deleteByExpiraEmBefore(LocalDateTime.now());
     }
 
     public URI gerarRedirecionamentoErro(String errorMessage) {
