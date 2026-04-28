@@ -81,4 +81,34 @@ public class DocumentoService {
         }
         documentoRepository.deleteById(id);
     }
+
+    public DocumentoResponseDTO enviar(Long id, MultipartFile arquivo) {
+        Documento documento = documentoRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado: " + id));
+
+        documento.setUrl(salvarArquivo(arquivo));
+        documento.setValidado("EM_ANALISE");
+
+        return documentoMapper.toResponseDto(documentoRepository.save(documento));
+    }
+
+    // --- helpers ---
+
+    private String salvarArquivo(MultipartFile arquivo) {
+        try {
+            Path pasta = Paths.get("uploads/documentos");
+
+            if (!Files.exists(pasta)) {
+                Files.createDirectories(pasta);
+            }
+
+            String nomeArquivo = UUID.randomUUID() + "_" + arquivo.getOriginalFilename();
+            Path destino = pasta.resolve(nomeArquivo);
+            Files.copy(arquivo.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
+
+            return destino.toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Erro ao salvar arquivo: " + e.getMessage());
+        }
+    }
 }
