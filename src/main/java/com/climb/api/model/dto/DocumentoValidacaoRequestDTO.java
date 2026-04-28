@@ -1,5 +1,9 @@
 package com.climb.api.model.dto;
 
+import com.climb.api.model.enums.DocumentoStatus;
+import jakarta.validation.constraints.NotNull;
+
 public record DocumentoValidacaoRequestDTO(
-        String validado
+        @NotNull(message = "O status é obrigatório")
+        DocumentoStatus validado
 ) {}

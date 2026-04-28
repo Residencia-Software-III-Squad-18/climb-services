@@ -5,6 +5,7 @@ import com.climb.api.model.Documento;
 import com.climb.api.model.dto.DocumentoResponseDTO;
 import com.climb.api.model.dto.DocumentoSolicitacaoRequestDTO;
 import com.climb.api.model.dto.DocumentoValidacaoRequestDTO;
+import com.climb.api.model.enums.DocumentoStatus;
 import com.climb.api.repository.DocumentoRepository;
 import com.climb.api.repository.EmpresaRepository;
 import com.climb.api.repository.UsuarioRepository;
@@ -53,7 +54,7 @@ public class DocumentoService {
     public DocumentoResponseDTO solicitar(DocumentoSolicitacaoRequestDTO dto) {
         Documento documento = documentoMapper.toEntity(dto);
 
-        documento.setValidado("PENDENTE");
+        documento.setValidado(DocumentoStatus.PENDENTE);
         documento.setEmpresa(empresaRepository.findById(dto.empresaId())
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Empresa não encontrada: " + dto.empresaId())));
@@ -87,13 +88,14 @@ public class DocumentoService {
                 .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado: " + id));
 
         documento.setUrl(salvarArquivo(arquivo));
-        documento.setValidado("EM_ANALISE");
+        documento.setValidado(DocumentoStatus.EM_ANALISE);
 
         return documentoMapper.toResponseDto(documentoRepository.save(documento));
     }
 
-    // --- helpers ---
-
+    // Salvar o Arquivo
+    // Nesse momento está salvando localmente
+    // Depois deve ser integrado com o google drive
     private String salvarArquivo(MultipartFile arquivo) {
         try {
             Path pasta = Paths.get("uploads/documentos");

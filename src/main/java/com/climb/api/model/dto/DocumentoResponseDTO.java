@@ -1,12 +1,14 @@
 package com.climb.api.model.dto;
 
+import com.climb.api.model.enums.DocumentoStatus;
+
 public record DocumentoResponseDTO(
         Long id,
         Long empresaId,
         String nomeEmpresa,
         String tipoDocumento,
         String url,
-        String validado,
+        DocumentoStatus validado,
         Long analistaId,
         String nomeAnalista
 ) {}
