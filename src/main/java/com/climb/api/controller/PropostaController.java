@@ -1,7 +1,12 @@
 package com.climb.api.controller;
 
-import com.climb.api.model.Proposta;
+import com.climb.api.model.dto.ApiResponse;
+import com.climb.api.model.dto.PropostaRequestDTO;
+import com.climb.api.model.dto.PropostaResponseDTO;
 import com.climb.api.service.PropostaService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,32 +22,57 @@ public class PropostaController {
     }
 
     @GetMapping
-    public List<Proposta> listar() {
-        return service.listar();
+    public ResponseEntity<ApiResponse<List<PropostaResponseDTO>>> listar() {
+        return ResponseEntity.ok(ApiResponse.ok(service.listar()));
     }
 
     @GetMapping("/{id}")
-    public Proposta buscarPorId(@PathVariable Long id) {
-        return service.buscarPorId(id);
+    public ResponseEntity<ApiResponse<PropostaResponseDTO>> buscarPorId(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(service.buscarPorId(id)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @GetMapping("/status/{status}")
-    public List<Proposta> listarPorStatus(@PathVariable String status) {
-        return service.listarPorStatus(status);
+    public ResponseEntity<ApiResponse<List<PropostaResponseDTO>>> listarPorStatus(@PathVariable String status) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(service.listarPorStatus(status)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @PostMapping
-    public Proposta criar(@RequestBody Proposta proposta) {
-        return service.criar(proposta);
+    public ResponseEntity<ApiResponse<PropostaResponseDTO>> criar(@Valid @RequestBody PropostaRequestDTO proposta) {
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(service.criar(proposta)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}")
-    public Proposta atualizar(@PathVariable Long id, @RequestBody Proposta atualizada) {
-        return service.atualizar(id, atualizada);
+    public ResponseEntity<ApiResponse<PropostaResponseDTO>> atualizar(@PathVariable Long id,
+                                                                       @Valid @RequestBody PropostaRequestDTO atualizada) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(service.atualizar(id, atualizada)));
+        } catch (RuntimeException e) {
+            if ("Proposta não encontrada".equals(e.getMessage())) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
-        service.deletar(id);
+    public ResponseEntity<ApiResponse<Void>> deletar(@PathVariable Long id) {
+        try {
+            service.deletar(id);
+            return ResponseEntity.ok(ApiResponse.ok(null, "Proposta removida com sucesso"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        }
     }
 }
