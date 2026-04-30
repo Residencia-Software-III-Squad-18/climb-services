@@ -12,11 +12,17 @@ import com.google.auth.oauth2.GoogleCredentials;
 import org.springframework.stereotype.Service;
 import com.google.api.client.util.DateTime;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class GoogleCalendarService {
+
+    private static final String TIME_ZONE = "America/Fortaleza";
+    private static final ZoneId ZONE_ID = ZoneId.of(TIME_ZONE);
 
     public String criarEvento(Reuniao reuniao, String accessToken) throws Exception {
 
@@ -33,13 +39,21 @@ public class GoogleCalendarService {
 
         Event event = new Event()
                 .setSummary(reuniao.getTitulo())
-                .setDescription(reuniao.getPauta());
+                .setDescription(reuniao.getPauta())
+                .setLocation(reuniao.getLocal());
 
-        String dataHora = reuniao.getData() + "T" + reuniao.getHora() + ":00";
-        DateTime dateTime = new DateTime(dataHora);
-        EventDateTime eventDateTime = new EventDateTime().setDateTime(dateTime);
-        event.setStart(eventDateTime);
-        event.setEnd(eventDateTime);
+        LocalDateTime inicio = LocalDateTime.of(reuniao.getData(), reuniao.getHora());
+        LocalDateTime fim = inicio.plusHours(1);
+
+        EventDateTime startDateTime = new EventDateTime()
+                .setDateTime(toGoogleDateTime(inicio))
+                .setTimeZone(TIME_ZONE);
+        EventDateTime endDateTime = new EventDateTime()
+                .setDateTime(toGoogleDateTime(fim))
+                .setTimeZone(TIME_ZONE);
+
+        event.setStart(startDateTime);
+        event.setEnd(endDateTime);
 
         if (Boolean.FALSE.equals(reuniao.getPresencial())) {
             ConferenceSolutionKey key = new ConferenceSolutionKey().setType("hangoutsMeet");
@@ -55,6 +69,13 @@ public class GoogleCalendarService {
                 .execute();
 
         return created.getId();
+    }
+
+    private DateTime toGoogleDateTime(LocalDateTime localDateTime) {
+        String value = localDateTime
+                .atZone(ZONE_ID)
+                .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        return new DateTime(value);
     }
 
     public void deletarEvento(String googleEventId, String accessToken) throws Exception {
