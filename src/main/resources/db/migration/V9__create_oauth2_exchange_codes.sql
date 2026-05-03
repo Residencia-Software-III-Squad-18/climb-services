@@ -1,5 +1,5 @@
 CREATE TABLE oauth2_exchange_codes (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(64) NOT NULL UNIQUE,
     access_token VARCHAR(2048) NOT NULL,
     refresh_token VARCHAR(2048),
