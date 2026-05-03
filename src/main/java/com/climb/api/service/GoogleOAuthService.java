@@ -2,14 +2,26 @@ package com.climb.api.service;
 
 import com.climb.api.config.GoogleCalendarConfig;
 import com.climb.api.model.Cargo;
+import com.climb.api.model.OAuth2ExchangeCode;
+import com.climb.api.model.OAuth2PendingRegistration;
+import com.climb.api.model.OAuthProvider;
 import com.climb.api.model.Usuario;
+import com.climb.api.model.UsuarioOAuth;
+import com.climb.api.model.dto.CompleteGoogleRegistrationRequestDTO;
+import com.climb.api.model.dto.ExchangeCodeResponseDTO;
 import com.climb.api.model.dto.GoogleAuthorizationUrlResponseDTO;
+import com.climb.api.model.dto.GoogleOAuthResolveResponseDTO;
 import com.climb.api.model.dto.GoogleTokenResponseDTO;
+import com.climb.api.model.dto.LoginResponseDTO;
 import com.climb.api.model.dto.UsuarioResponseDTO;
 import com.climb.api.repository.CargoRepository;
+import com.climb.api.repository.OAuth2ExchangeCodeRepository;
+import com.climb.api.repository.OAuth2PendingRegistrationRepository;
+import com.climb.api.repository.UsuarioOAuthRepository;
 import com.climb.api.repository.UsuarioRepository;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
@@ -18,6 +30,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -25,10 +40,20 @@ import java.util.UUID;
 @Service
 public class GoogleOAuthService {
 
+    // Status constants for OAuth2 login flow
+    public static final String STATUS_LOGIN_SUCCESS = "LOGIN_SUCCESS";
+    public static final String STATUS_CADASTRO_PENDENTE = "CADASTRO_PENDENTE";
+    public static final String STATUS_GOOGLE_NOT_LINKED = "GOOGLE_NOT_LINKED";
+    public static final String STATUS_LINK_SUCCESS = "LINK_SUCCESS";
+
+    // Google API endpoints
     private static final String GOOGLE_AUTH_URI = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String GOOGLE_TOKEN_URI = "https://oauth2.googleapis.com/token";
     private static final String GOOGLE_USERINFO_URI = "https://www.googleapis.com/oauth2/v3/userinfo";
     private static final String GOOGLE_SCOPE = "openid email profile https://www.googleapis.com/auth/calendar";
+
+    private static final int EXCHANGE_CODE_EXPIRATION_SECONDS = 60;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @org.springframework.beans.factory.annotation.Value("${google.calendar.allowed-domain:}")
     private String googleAllowedDomain;
@@ -39,13 +64,21 @@ public class GoogleOAuthService {
     private final CargoRepository cargoRepository;
     private final JwtUtil jwtUtil;
     private final RestClient restClient;
+    private final UsuarioOAuthRepository usuarioOAuthRepository;
+    private final OAuth2PendingRegistrationRepository pendingRegistrationRepository;
+    private final OAuth2ExchangeCodeRepository exchangeCodeRepository;
+    private final AuthenticationService authenticationService;
 
     public GoogleOAuthService(
             GoogleCalendarConfig googleCalendarConfig,
             UsuarioService usuarioService,
             UsuarioRepository usuarioRepository,
             CargoRepository cargoRepository,
-            JwtUtil jwtUtil
+            JwtUtil jwtUtil,
+            UsuarioOAuthRepository usuarioOAuthRepository,
+            OAuth2PendingRegistrationRepository pendingRegistrationRepository,
+            OAuth2ExchangeCodeRepository exchangeCodeRepository,
+            AuthenticationService authenticationService
     ) {
         this.googleCalendarConfig = googleCalendarConfig;
         this.usuarioService = usuarioService;
@@ -53,7 +86,13 @@ public class GoogleOAuthService {
         this.cargoRepository = cargoRepository;
         this.jwtUtil = jwtUtil;
         this.restClient = RestClient.builder().build();
+        this.usuarioOAuthRepository = usuarioOAuthRepository;
+        this.pendingRegistrationRepository = pendingRegistrationRepository;
+        this.exchangeCodeRepository = exchangeCodeRepository;
+        this.authenticationService = authenticationService;
     }
+
+    // ==================== Google Calendar API Integration ====================
 
     public GoogleAuthorizationUrlResponseDTO gerarUrlAutorizacao() {
         validarConfiguracao();
@@ -128,33 +167,85 @@ public class GoogleOAuthService {
                 && !googleCalendarConfig.getRedirectUri().isBlank();
     }
 
+    @Transactional
     public URI gerarRedirecionamentoFrontend(GoogleTokenResponseDTO tokenResponse) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(googleCalendarConfig.getFrontendUrl())
-                .queryParam("google_oauth", "success")
-                .queryParam("google_access_token", tokenResponse.accessToken());
+        limparExchangeCodesExpirados();
 
-        if (tokenResponse.refreshToken() != null) builder.queryParam("google_refresh_token", tokenResponse.refreshToken());
-        if (tokenResponse.tokenType() != null) builder.queryParam("google_token_type", tokenResponse.tokenType());
-        if (tokenResponse.expiresIn() != null) builder.queryParam("google_expires_in", tokenResponse.expiresIn());
-        if (tokenResponse.scope() != null) builder.queryParam("google_scope", tokenResponse.scope());
-        if (tokenResponse.appAccessToken() != null) builder.queryParam("app_access_token", tokenResponse.appAccessToken());
-        if (tokenResponse.appRefreshToken() != null) builder.queryParam("app_refresh_token", tokenResponse.appRefreshToken());
-        if (tokenResponse.appExpiresIn() != null) builder.queryParam("app_expires_in", tokenResponse.appExpiresIn());
+        String code = gerarCodigoSeguro();
+
+        OAuth2ExchangeCode exchangeCode = new OAuth2ExchangeCode();
+        exchangeCode.setCode(code);
+        exchangeCode.setAccessToken(tokenResponse.appAccessToken());
+        exchangeCode.setRefreshToken(tokenResponse.appRefreshToken());
+        exchangeCode.setGoogleAccessToken(tokenResponse.accessToken());
+        exchangeCode.setGoogleRefreshToken(tokenResponse.refreshToken());
+        exchangeCode.setExpiresIn(tokenResponse.appExpiresIn());
 
         if (tokenResponse.usuario() != null) {
-            builder.queryParam("app_user_id", tokenResponse.usuario().getId());
-            builder.queryParam("app_user_name", tokenResponse.usuario().getNomeCompleto());
-            builder.queryParam("app_user_email", tokenResponse.usuario().getEmail());
-            builder.queryParam("app_user_status", tokenResponse.usuario().getSituacao());
-
-            if (tokenResponse.usuario().getCargoNome() != null) {
-                builder.queryParam("app_user_role", tokenResponse.usuario().getCargoNome());
-            }
+            exchangeCode.setUserId(tokenResponse.usuario().getId());
+            exchangeCode.setUserEmail(tokenResponse.usuario().getEmail());
+            exchangeCode.setUserName(tokenResponse.usuario().getNomeCompleto());
+            exchangeCode.setUserStatus(tokenResponse.usuario().getSituacao());
+            exchangeCode.setUserRole(tokenResponse.usuario().getCargoNome());
         }
 
-        return builder.build()
+        exchangeCode.setExpiraEm(LocalDateTime.now().plusSeconds(EXCHANGE_CODE_EXPIRATION_SECONDS));
+        exchangeCode.setConsumido(false);
+        exchangeCode.setCriadoEm(LocalDateTime.now());
+
+        exchangeCodeRepository.save(exchangeCode);
+
+        return UriComponentsBuilder.fromUriString(googleCalendarConfig.getFrontendUrl())
+                .queryParam("google_oauth", "success")
+                .queryParam("code", code)
+                .build()
                 .encode(StandardCharsets.UTF_8)
                 .toUri();
+    }
+
+    @Transactional
+    public ExchangeCodeResponseDTO exchangeCode(String code) {
+        limparExchangeCodesExpirados();
+
+        OAuth2ExchangeCode exchangeCode = exchangeCodeRepository
+                .findByCodeAndConsumidoFalse(code)
+                .orElseThrow(() -> new RuntimeException("Codigo invalido ou expirado"));
+
+        if (exchangeCode.getExpiraEm().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Codigo expirado");
+        }
+
+        exchangeCode.setConsumido(true);
+        exchangeCodeRepository.save(exchangeCode);
+
+        UsuarioResponseDTO usuario = null;
+        if (exchangeCode.getUserId() != null) {
+            usuario = new UsuarioResponseDTO();
+            usuario.setId(exchangeCode.getUserId());
+            usuario.setEmail(exchangeCode.getUserEmail());
+            usuario.setNomeCompleto(exchangeCode.getUserName());
+            usuario.setSituacao(exchangeCode.getUserStatus());
+            usuario.setCargoNome(exchangeCode.getUserRole());
+        }
+
+        return new ExchangeCodeResponseDTO(
+                exchangeCode.getAccessToken(),
+                exchangeCode.getRefreshToken(),
+                exchangeCode.getExpiresIn(),
+                exchangeCode.getGoogleAccessToken(),
+                exchangeCode.getGoogleRefreshToken(),
+                usuario
+        );
+    }
+
+    private String gerarCodigoSeguro() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private void limparExchangeCodesExpirados() {
+        exchangeCodeRepository.deleteByExpiraEmBefore(LocalDateTime.now());
     }
 
     public URI gerarRedirecionamentoErro(String errorMessage) {
@@ -166,10 +257,181 @@ public class GoogleOAuthService {
                 .toUri();
     }
 
+    // ==================== OAuth2 Login/Registration Flow ====================
+
+    @Transactional
+    public GoogleOAuthResolveResponseDTO resolverLoginGoogle(String providerUserId,
+                                                             String email,
+                                                             String nome,
+                                                             String avatarUrl) {
+        validarDadosGoogle(providerUserId, email);
+        limparPendenciasExpiradas();
+
+        UsuarioOAuth vinculo = usuarioOAuthRepository
+                .findByProviderAndProviderUserId(OAuthProvider.GOOGLE, providerUserId)
+                .orElse(null);
+
+        if (vinculo != null) {
+            LoginResponseDTO login = authenticationService.gerarRespostaLogin(vinculo.getUsuario());
+            GoogleOAuthResolveResponseDTO response = new GoogleOAuthResolveResponseDTO();
+            response.setStatus(STATUS_LOGIN_SUCCESS);
+            response.setLogin(login);
+            response.setMessage("Login Google realizado com sucesso");
+            return response;
+        }
+
+        Usuario usuarioExistente = usuarioService.buscarPorEmail(email);
+        if (usuarioExistente != null) {
+            GoogleOAuthResolveResponseDTO response = new GoogleOAuthResolveResponseDTO();
+            response.setStatus(STATUS_GOOGLE_NOT_LINKED);
+            response.setEmail(email);
+            response.setNome(nome);
+            response.setAvatarUrl(avatarUrl);
+            response.setMessage("Ja existe um usuario com esse e-mail. Faca login normal para vincular a conta Google.");
+            return response;
+        }
+
+        OAuth2PendingRegistration pending = pendingRegistrationRepository
+                .findByProviderAndProviderUserId(OAuthProvider.GOOGLE, providerUserId)
+                .orElseGet(OAuth2PendingRegistration::new);
+
+        pending.setProvider(OAuthProvider.GOOGLE);
+        pending.setProviderUserId(providerUserId);
+        pending.setEmail(email);
+        pending.setNome(nome);
+        pending.setAvatarUrl(avatarUrl);
+        pending.setTokenUnico(UUID.randomUUID().toString());
+        pending.setExpiraEm(LocalDateTime.now().plusMinutes(30));
+        pending.setConsumido(false);
+        if (pending.getCriadoEm() == null) {
+            pending.setCriadoEm(LocalDateTime.now());
+        }
+
+        pendingRegistrationRepository.save(pending);
+
+        GoogleOAuthResolveResponseDTO response = new GoogleOAuthResolveResponseDTO();
+        response.setStatus(STATUS_CADASTRO_PENDENTE);
+        response.setPendingToken(pending.getTokenUnico());
+        response.setEmail(email);
+        response.setNome(nome);
+        response.setAvatarUrl(avatarUrl);
+        response.setMessage("Complete seu cadastro para finalizar o login com Google.");
+        return response;
+    }
+
+    @Transactional
+    public LoginResponseDTO concluirCadastro(CompleteGoogleRegistrationRequestDTO dto) {
+        if (dto.getPendingToken() == null || dto.getPendingToken().isBlank()) {
+            throw new RuntimeException("Pending token obrigatorio");
+        }
+
+        limparPendenciasExpiradas();
+
+        OAuth2PendingRegistration pending = pendingRegistrationRepository
+                .findByTokenUnicoAndConsumidoFalse(dto.getPendingToken())
+                .orElseThrow(() -> new RuntimeException("Cadastro Google pendente nao encontrado ou expirado"));
+
+        if (pending.getExpiraEm().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Cadastro Google pendente expirado");
+        }
+
+        Usuario usuarioExistente = usuarioService.buscarPorEmail(pending.getEmail());
+        if (usuarioExistente != null) {
+            throw new RuntimeException("Ja existe um usuario cadastrado com esse e-mail");
+        }
+
+        Usuario usuario = usuarioService.criarViaGoogle(
+                pending.getNome(),
+                pending.getEmail(),
+                dto.getCpf(),
+                dto.getContato(),
+                dto.getSenha(),
+                dto.getCargoId()
+        );
+
+        UsuarioOAuth vinculo = new UsuarioOAuth();
+        vinculo.setUsuario(usuario);
+        vinculo.setProvider(OAuthProvider.GOOGLE);
+        vinculo.setProviderUserId(pending.getProviderUserId());
+        vinculo.setEmailProvider(pending.getEmail());
+        vinculo.setNomeProvider(pending.getNome());
+        vinculo.setAvatarUrl(pending.getAvatarUrl());
+        vinculo.setVinculadoEm(LocalDateTime.now());
+        usuarioOAuthRepository.save(vinculo);
+
+        pending.setConsumido(true);
+        pendingRegistrationRepository.save(pending);
+
+        return authenticationService.gerarRespostaLogin(usuario);
+    }
+
+    @Transactional
+    public GoogleOAuthResolveResponseDTO vincularConta(Long usuarioId,
+                                                       String providerUserId,
+                                                       String email,
+                                                       String nome,
+                                                       String avatarUrl) {
+        validarDadosGoogle(providerUserId, email);
+
+        Usuario usuario = usuarioService.buscarPorId(usuarioId);
+        authenticationService.validarUsuarioAtivo(usuario, "Usuario nao encontrado");
+
+        UsuarioOAuth vinculoExistente = usuarioOAuthRepository
+                .findByProviderAndProviderUserId(OAuthProvider.GOOGLE, providerUserId)
+                .orElse(null);
+
+        if (vinculoExistente != null && !vinculoExistente.getUsuario().getId().equals(usuarioId)) {
+            throw new RuntimeException("Esta conta Google ja esta vinculada a outro usuario");
+        }
+
+        UsuarioOAuth vinculo = usuarioOAuthRepository
+                .findByUsuarioIdAndProvider(usuarioId, OAuthProvider.GOOGLE)
+                .orElseGet(UsuarioOAuth::new);
+
+        if (vinculo.getId() != null && !vinculo.getProviderUserId().equals(providerUserId)) {
+            throw new RuntimeException("Este usuario ja possui outra conta Google vinculada");
+        }
+
+        vinculo.setUsuario(usuario);
+        vinculo.setProvider(OAuthProvider.GOOGLE);
+        vinculo.setProviderUserId(providerUserId);
+        vinculo.setEmailProvider(email);
+        vinculo.setNomeProvider(nome);
+        vinculo.setAvatarUrl(avatarUrl);
+        if (vinculo.getVinculadoEm() == null) {
+            vinculo.setVinculadoEm(LocalDateTime.now());
+        }
+        usuarioOAuthRepository.save(vinculo);
+
+        GoogleOAuthResolveResponseDTO response = new GoogleOAuthResolveResponseDTO();
+        response.setStatus(STATUS_LINK_SUCCESS);
+        response.setEmail(email);
+        response.setNome(nome);
+        response.setAvatarUrl(avatarUrl);
+        response.setMessage("Conta Google vinculada com sucesso");
+        return response;
+    }
+
+    // ==================== Private Helper Methods ====================
+
     private void validarConfiguracao() {
         if (!isConfigured()) {
             throw new RuntimeException("Google Calendar OAuth nao configurado. Defina GOOGLE_CALENDAR_CLIENT_ID, GOOGLE_CALENDAR_CLIENT_SECRET e GOOGLE_CALENDAR_REDIRECT_URI.");
         }
+    }
+
+    private void validarDadosGoogle(String providerUserId, String email) {
+        if (providerUserId == null || providerUserId.isBlank()) {
+            throw new RuntimeException("O Google nao retornou um identificador valido");
+        }
+
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("O Google nao retornou um e-mail valido");
+        }
+    }
+
+    private void limparPendenciasExpiradas() {
+        pendingRegistrationRepository.deleteByExpiraEmBefore(LocalDateTime.now());
     }
 
     private UsuarioResponseDTO autenticarUsuarioGoogle(String googleAccessToken) {

@@ -1,6 +1,9 @@
 package com.climb.api.controller;
 
 import com.climb.api.model.dto.ApiResponse;
+import com.climb.api.model.dto.CompleteGoogleRegistrationRequestDTO;
+import com.climb.api.model.dto.ExchangeCodeRequestDTO;
+import com.climb.api.model.dto.ExchangeCodeResponseDTO;
 import com.climb.api.model.dto.GoogleAuthorizationUrlResponseDTO;
 import com.climb.api.model.dto.LoginRequestDTO;
 import com.climb.api.model.dto.LoginResponseDTO;
@@ -90,5 +93,27 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, uri.toASCIIString())
                 .build();
+    }
+
+    @PostMapping("/google/complete-registration")
+    public ResponseEntity<ApiResponse<LoginResponseDTO>> completeGoogleRegistration(
+            @RequestBody CompleteGoogleRegistrationRequestDTO dto) {
+        try {
+            LoginResponseDTO response = googleOAuthService.concluirCadastro(dto);
+            return ResponseEntity.ok(ApiResponse.ok(response, "Cadastro Google concluido com sucesso"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/exchange")
+    public ResponseEntity<ApiResponse<ExchangeCodeResponseDTO>> exchangeCode(
+            @RequestBody ExchangeCodeRequestDTO dto) {
+        try {
+            ExchangeCodeResponseDTO response = googleOAuthService.exchangeCode(dto.code());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Tokens obtidos com sucesso"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
+        }
     }
 }
