@@ -17,8 +17,9 @@ public class ReuniaoController {
     }
 
     @GetMapping
-    public List<Reuniao> listar() {
-        return service.listar();
+    public List<Reuniao> listar(
+            @RequestHeader(value = "X-Google-Access-Token", required = false) String googleAccessToken) {
+        return service.listar(googleAccessToken);
     }
 
     @GetMapping("/{id}")
@@ -39,12 +40,17 @@ public class ReuniaoController {
     }
 
     @PutMapping("/{id}")
-    public Reuniao atualizar(@PathVariable Long id, @RequestBody Reuniao atualizada) {
-        return service.atualizar(id, atualizada);
+    public Reuniao atualizar(
+            @PathVariable Long id,
+            @RequestBody Reuniao atualizada,
+            @RequestHeader(value = "X-Google-Access-Token", required = false) String googleAccessToken) {
+        return service.atualizar(id, atualizada, googleAccessToken);
     }
 
     @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
-        service.deletar(id);
+    public void deletar(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Google-Access-Token", required = false) String googleAccessToken) {
+        service.deletar(id, googleAccessToken);
     }
 }
