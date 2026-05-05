@@ -25,6 +25,18 @@ public class ReuniaoService {
         return repository.findAll();
     }
 
+    public List<Reuniao> listar(String googleAccessToken) {
+        List<Reuniao> reunioes = repository.findAll();
+
+        if (googleAccessToken == null || googleAccessToken.isBlank()) {
+            return reunioes;
+        }
+
+        return reunioes.stream()
+                .filter(reuniao -> sincronizarEventoGoogle(reuniao, googleAccessToken))
+                .toList();
+    }
+
     public Reuniao buscarPorId(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reunião não encontrada"));
@@ -62,7 +74,7 @@ public class ReuniaoService {
         return salva;
     }
 
-    public Reuniao atualizar(Long id, Reuniao atualizada) {
+    public Reuniao atualizar(Long id, Reuniao atualizada, String accessToken) {
 
         Reuniao reuniao = buscarPorId(id);
 
@@ -75,11 +87,52 @@ public class ReuniaoService {
         reuniao.setPauta(atualizada.getPauta());
         reuniao.setStatus(atualizada.getStatus());
 
-        return repository.save(reuniao);
+        Reuniao salva = repository.save(reuniao);
+
+        if (accessToken != null && !accessToken.isBlank() && salva.getGoogleEventId() != null) {
+            try {
+                googleCalendarService.atualizarEvento(salva, accessToken);
+            } catch (Exception e) {
+                log.warn("Falha ao atualizar evento no Google Calendar para reunião {}: {}", salva.getIdReuniao(), e.getMessage());
+            }
+        }
+
+        return salva;
     }
 
-    public void deletar(Long id) {
+    public void deletar(Long id, String accessToken) {
         Reuniao reuniao = buscarPorId(id);
+        if (
+                accessToken != null &&
+                !accessToken.isBlank() &&
+                reuniao.getGoogleEventId() != null &&
+                !reuniao.getGoogleEventId().isBlank()
+        ) {
+            try {
+                googleCalendarService.deletarEvento(reuniao.getGoogleEventId(), accessToken);
+            } catch (Exception e) {
+                log.warn("Falha ao excluir evento no Google Calendar para reunião {}: {}", reuniao.getIdReuniao(), e.getMessage());
+            }
+        }
         repository.delete(reuniao);
+    }
+
+    private boolean sincronizarEventoGoogle(Reuniao reuniao, String accessToken) {
+        if (reuniao.getGoogleEventId() == null || reuniao.getGoogleEventId().isBlank()) {
+            return true;
+        }
+
+        try {
+            if (googleCalendarService.eventoExiste(reuniao.getGoogleEventId(), accessToken)) {
+                return true;
+            }
+
+            repository.delete(reuniao);
+            log.info("Reuniao {} removida localmente porque o evento Google foi excluido", reuniao.getIdReuniao());
+            return false;
+        } catch (Exception e) {
+            log.warn("Falha ao sincronizar evento Google da reunião {}: {}", reuniao.getIdReuniao(), e.getMessage());
+            return true;
+        }
     }
 }
