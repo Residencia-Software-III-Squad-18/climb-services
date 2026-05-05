@@ -35,6 +35,10 @@ INSERT INTO permissoes (descricao, codigo) VALUES
 ('Upload de arquivos', 'ARQUIVO_UPLOAD'),
 ('Download de arquivos', 'ARQUIVO_DOWNLOAD');
 
+-- Permissão para propostas comerciais
+INSERT INTO permissoes (descricao, codigo) VALUES
+('Visualização, criação, edição e exclusão de Propostas Comerciais', 'PROPOSTA_CRUD');
+
 -- ============================================
 -- 3. SERVIÇOS (Requisitos de Domínio 3)
 -- ============================================

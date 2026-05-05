@@ -3,11 +3,13 @@ package com.climb.api.service;
 import com.climb.api.model.Empresa;
 import com.climb.api.model.Proposta;
 import com.climb.api.model.Usuario;
+import com.climb.api.model.PermissaoCodigo;
 import com.climb.api.model.dto.PropostaRequestDTO;
 import com.climb.api.model.dto.PropostaResponseDTO;
 import com.climb.api.repository.EmpresaRepository;
 import com.climb.api.repository.PropostaRepository;
 import com.climb.api.repository.UsuarioRepository;
+import com.climb.api.service.RbacService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -19,13 +21,16 @@ public class PropostaService {
     private final PropostaRepository repository;
     private final EmpresaRepository empresaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final RbacService rbacService;
 
     public PropostaService(PropostaRepository repository,
                            EmpresaRepository empresaRepository,
-                           UsuarioRepository usuarioRepository) {
+                           UsuarioRepository usuarioRepository,
+                           RbacService rbacService) {
         this.repository = repository;
         this.empresaRepository = empresaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.rbacService = rbacService;
     }
 
     private PropostaResponseDTO toResponseDTO(Proposta proposta) {
@@ -73,6 +78,10 @@ public class PropostaService {
     }
 
     public PropostaResponseDTO criar(PropostaRequestDTO dto) {
+        // exige permissão para criar propostas
+        if (dto.usuarioId() == null || !rbacService.temPermissao(dto.usuarioId(), PermissaoCodigo.PROPOSTA_CRUD)) {
+            throw new RuntimeException("Usuário não tem permissão para criar propostas");
+        }
         validarStatus(dto.status());
 
         Proposta proposta = new Proposta();
@@ -85,6 +94,10 @@ public class PropostaService {
     }
 
     public PropostaResponseDTO atualizar(Long id, PropostaRequestDTO dto) {
+        // exige permissão para editar propostas
+        if (dto.usuarioId() == null || !rbacService.temPermissao(dto.usuarioId(), PermissaoCodigo.PROPOSTA_CRUD)) {
+            throw new RuntimeException("Usuário não tem permissão para editar propostas");
+        }
         validarStatus(dto.status());
 
         Proposta proposta = repository.findById(id)
