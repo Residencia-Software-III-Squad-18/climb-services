@@ -10,4 +10,5 @@ public enum PermissaoCodigo {
     RELATORIO_CRUD,
     ARQUIVO_UPLOAD,
     ARQUIVO_DOWNLOAD
+    ,PROPOSTA_CRUD
 }
