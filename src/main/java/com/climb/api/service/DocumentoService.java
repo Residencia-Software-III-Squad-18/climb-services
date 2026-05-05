@@ -10,9 +10,16 @@ import com.climb.api.repository.DocumentoRepository;
 import com.climb.api.repository.EmpresaRepository;
 import com.climb.api.repository.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.tika.Tika;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -74,8 +81,6 @@ public class DocumentoService {
         return documentoMapper.toResponseDto(documentoRepository.save(documento));
     }
 
-
-
     public void deletar(Long id) {
         if (!documentoRepository.existsById(id)) {
             throw new EntityNotFoundException("Documento não encontrado: " + id);
@@ -98,8 +103,9 @@ public class DocumentoService {
     // Depois deve ser integrado com o google drive
     private String salvarArquivo(MultipartFile arquivo) {
         try {
-            Path pasta = Paths.get("uploads/documentos");
+            validarArquivo(arquivo); // Cancela aqui se corrompido
 
+            Path pasta = Paths.get("uploads/documentos");
             if (!Files.exists(pasta)) {
                 Files.createDirectories(pasta);
             }
@@ -112,5 +118,44 @@ public class DocumentoService {
         } catch (IOException e) {
             throw new RuntimeException("Erro ao salvar arquivo: " + e.getMessage());
         }
+    }
+
+    private void validarArquivo(MultipartFile arquivo) throws IOException {
+        if (arquivo.isEmpty()) {
+            throw new RuntimeException("Arquivo está vazio.");
+        }
+
+        Tika tika = new Tika();
+        String tipo = tika.detect(arquivo.getBytes());
+
+        switch (tipo) {
+            case "application/pdf" -> {
+                try (PDDocument doc = Loader.loadPDF(arquivo.getBytes())) {
+                    if (doc.getNumberOfPages() == 0)
+                        throw new RuntimeException("PDF corrompido: sem páginas.");
+                } catch (IOException e) {
+                    throw new RuntimeException("PDF corrompido: " + e.getMessage());
+                }
+            }
+            case "image/jpeg", "image/png", "image/gif", "image/bmp" -> {
+                BufferedImage img = ImageIO.read(arquivo.getInputStream());
+                if (img == null)
+                    throw new RuntimeException("Imagem corrompida ou ilegível.");
+            }
+            case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> {
+                try (XSSFWorkbook wb = new XSSFWorkbook(arquivo.getInputStream())) {}
+                catch (Exception e) {
+                    throw new RuntimeException("XLSX corrompido: " + e.getMessage());
+                }
+            }
+            case "application/vnd.ms-excel" -> {
+                try (HSSFWorkbook wb = new HSSFWorkbook(arquivo.getInputStream())) {}
+                catch (Exception e) {
+                    throw new RuntimeException("XLS corrompido: " + e.getMessage());
+                }
+            }
+            // Outros tipos são aceitos normalmente
+        }
+
     }
 }
