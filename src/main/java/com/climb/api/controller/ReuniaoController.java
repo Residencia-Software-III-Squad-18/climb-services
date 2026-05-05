@@ -1,6 +1,7 @@
 package com.climb.api.controller;
 
 import com.climb.api.model.Reuniao;
+import com.climb.api.model.dto.ReuniaoListItemDTO;
 import com.climb.api.service.ReuniaoService;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +18,7 @@ public class ReuniaoController {
     }
 
     @GetMapping
-    public List<Reuniao> listar(
+    public List<ReuniaoListItemDTO> listar(
             @RequestHeader(value = "X-Google-Access-Token", required = false) String googleAccessToken) {
         return service.listar(googleAccessToken);
     }

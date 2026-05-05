@@ -1,12 +1,21 @@
 package com.climb.api.service;
 
 import com.climb.api.model.Reuniao;
+import com.climb.api.model.dto.ReuniaoListItemDTO;
 import com.climb.api.repository.ReuniaoRepository;
+import com.google.api.services.calendar.model.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class ReuniaoService {
@@ -21,20 +30,48 @@ public class ReuniaoService {
         this.googleCalendarService = googleCalendarService;
     }
 
-    public List<Reuniao> listar() {
-        return repository.findAll();
-    }
-
-    public List<Reuniao> listar(String googleAccessToken) {
+    public List<ReuniaoListItemDTO> listar(String googleAccessToken) {
         List<Reuniao> reunioes = repository.findAll();
 
         if (googleAccessToken == null || googleAccessToken.isBlank()) {
-            return reunioes;
+            return reunioes.stream().map(ReuniaoListItemDTO::fromEntity).toList();
         }
 
-        return reunioes.stream()
+        List<Reuniao> filtradas = reunioes.stream()
                 .filter(reuniao -> sincronizarEventoGoogle(reuniao, googleAccessToken))
                 .toList();
+
+        Set<String> idsGoogleJaNoClimb = filtradas.stream()
+                .map(Reuniao::getGoogleEventId)
+                .filter(id -> id != null && !id.isBlank())
+                .collect(Collectors.toCollection(HashSet::new));
+
+        List<ReuniaoListItemDTO> resultado = new ArrayList<>(filtradas.stream()
+                .map(ReuniaoListItemDTO::fromEntity)
+                .toList());
+
+        try {
+            Instant min = Instant.now().minus(90, ChronoUnit.DAYS);
+            Instant max = Instant.now().plus(365, ChronoUnit.DAYS);
+            List<Event> externos = googleCalendarService.listarEventosPrimarios(googleAccessToken, min, max);
+            for (Event ev : externos) {
+                if (ev == null || "cancelled".equalsIgnoreCase(ev.getStatus())) {
+                    continue;
+                }
+                String gid = ev.getId();
+                if (gid == null || idsGoogleJaNoClimb.contains(gid)) {
+                    continue;
+                }
+                resultado.add(ReuniaoListItemDTO.fromGoogleEventExterno(ev));
+            }
+        } catch (Exception e) {
+            log.warn("Não foi possível mesclar eventos externos do Google Calendar: {}", e.getMessage());
+        }
+
+        resultado.sort(Comparator
+                .comparing(ReuniaoListItemDTO::getData, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(ReuniaoListItemDTO::getHora, Comparator.nullsLast(Comparator.naturalOrder())));
+        return resultado;
     }
 
     public Reuniao buscarPorId(Long id) {

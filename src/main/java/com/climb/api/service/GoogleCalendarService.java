@@ -13,6 +13,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import org.springframework.stereotype.Service;
 import com.google.api.client.util.DateTime;
 
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -98,6 +99,16 @@ public class GoogleCalendarService {
         }
 
         return event;
+    }
+
+    public List<Event> listarEventosPrimarios(String accessToken, Instant timeMin, Instant timeMax) throws Exception {
+        Calendar.Events.List request = buildCalendar(accessToken).events().list("primary");
+        request.setTimeMin(new DateTime(timeMin.toEpochMilli()));
+        request.setTimeMax(new DateTime(timeMax.toEpochMilli()));
+        request.setSingleEvents(true);
+        request.setOrderBy("startTime");
+        Events events = request.execute();
+        return events.getItems() != null ? events.getItems() : List.of();
     }
 
     public void deletarEvento(String googleEventId, String accessToken) throws Exception {
