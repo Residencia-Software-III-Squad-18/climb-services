@@ -3,7 +3,6 @@ package com.climb.api.service;
 import com.climb.api.model.Reuniao;
 import com.climb.api.model.dto.ReuniaoListItemDTO;
 import com.climb.api.repository.ReuniaoRepository;
-import com.climb.api.util.LogSanitizer;
 import com.google.api.services.calendar.model.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

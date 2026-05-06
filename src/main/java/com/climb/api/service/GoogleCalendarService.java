@@ -1,7 +1,6 @@
 package com.climb.api.service;
 
 import com.climb.api.model.Reuniao;
-import com.climb.api.util.LogSanitizer;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.json.gson.GsonFactory;
@@ -20,8 +19,11 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -107,46 +109,118 @@ public class GoogleCalendarService {
         return event;
     }
 
+    /**
+     * Lista eventos como no app Google Calendar: todos os calendários da lista do usuário que estão
+     * visíveis ({@code selected}) e não ocultos ({@code hidden}), com instâncias recorrentes expandidas.
+     * Deduplica ocorrências repetidas entre calendários (mesmo {@code iCalUID} e mesmo início).
+     */
     public List<Event> listarEventosPrimarios(String accessToken, Instant timeMin, Instant timeMax) throws Exception {
         int tokenLen = accessToken != null ? accessToken.length() : 0;
-        log.info("GoogleCalendar list(primary) — tokenLen={}, janela {} .. {}", tokenLen, timeMin, timeMax);
-        Calendar.Events.List request = buildCalendar(accessToken).events().list("primary");
-        request.setTimeMin(new DateTime(timeMin.toEpochMilli()));
-        request.setTimeMax(new DateTime(timeMax.toEpochMilli()));
-        request.setSingleEvents(true);
-        request.setOrderBy("startTime");
-        Events events = request.execute();
-        List<Event> items = events.getItems() != null ? events.getItems() : List.of();
-        List<Event> filtrados = items.stream()
-                .filter(GoogleCalendarService::incluirNaMesclaComClimb)
-                .toList();
-        log.info("GoogleCalendar list(primary) — api={}, após incluirNaMesclaComClimb={}", items.size(), filtrados.size());
-        return filtrados;
+        log.info("GoogleCalendar list(visíveis como no app) — tokenLen={}, janela {} .. {}", tokenLen, timeMin, timeMax);
+
+        Calendar service = buildCalendar(accessToken);
+        List<CalendarListEntry> calendarEntries = new ArrayList<>();
+        String calListPage = null;
+        do {
+            Calendar.CalendarList.List calListReq = service.calendarList().list().setPageToken(calListPage);
+            CalendarList calList = calListReq.execute();
+            if (calList.getItems() != null) {
+                calendarEntries.addAll(calList.getItems());
+            }
+            calListPage = calList.getNextPageToken();
+        } while (calListPage != null);
+
+        DateTime tMin = new DateTime(timeMin.toEpochMilli());
+        DateTime tMax = new DateTime(timeMax.toEpochMilli());
+
+        List<Event> merged = new ArrayList<>();
+        Set<String> dedupKeys = new HashSet<>();
+        int calendarsUsados = 0;
+        int calendarsIgnorados = 0;
+        long totalBrutoApi = 0;
+
+        for (CalendarListEntry entry : calendarEntries) {
+            if (entry.getId() == null || entry.getId().isBlank()) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(entry.getHidden())) {
+                calendarsIgnorados++;
+                continue;
+            }
+            if (Boolean.FALSE.equals(entry.getSelected())) {
+                calendarsIgnorados++;
+                continue;
+            }
+            String calId = entry.getId();
+            calendarsUsados++;
+            String evPage = null;
+            do {
+                Calendar.Events.List req = service.events().list(calId)
+                        .setTimeMin(tMin)
+                        .setTimeMax(tMax)
+                        .setSingleEvents(true)
+                        .setOrderBy("startTime")
+                        .setPageToken(evPage);
+                Events chunk = req.execute();
+                List<Event> items = chunk.getItems() != null ? chunk.getItems() : List.of();
+                totalBrutoApi += items.size();
+                for (Event ev : items) {
+                    if (!eventoComInicioValido(ev)) {
+                        continue;
+                    }
+                    String key = chaveDedupEvento(ev, calId);
+                    if (!dedupKeys.add(key)) {
+                        continue;
+                    }
+                    merged.add(ev);
+                }
+                evPage = chunk.getNextPageToken();
+            } while (evPage != null);
+        }
+
+        log.info("GoogleCalendar — calendarList: {} entradas; calendários usados={}; ignorados(hidden/unselected)={}; "
+                        + "linhas brutas API={}; após dedup e filtro início={}",
+                calendarEntries.size(), calendarsUsados, calendarsIgnorados, totalBrutoApi, merged.size());
+        return merged;
     }
 
-    /**
-     * Inclui na mescla com o Climb tudo que tem início válido, exceto tipos sintéticos do Google que
-     * costumam poluir a agenda como "00:00 Home" ({@code workingLocation}) ou blocos de foco.
-     * <p>
-     * Não filtramos {@code birthday}, {@code outOfOffice}, {@code fromGmail} nem {@code default} —
-     * filtrar isso removeu eventos reais em alguns tenants.
-     */
-    private static boolean incluirNaMesclaComClimb(Event ev) {
+    /** Mesmo critério mínimo do app: precisa ter começo (data ou data/hora). */
+    private static boolean eventoComInicioValido(Event ev) {
         if (ev == null) {
             return false;
         }
         EventDateTime start = ev.getStart();
-        if (start == null || (start.getDateTime() == null && start.getDate() == null)) {
-            return false;
+        return start != null && (start.getDateTime() != null || start.getDate() != null);
+    }
+
+    /**
+     * Evita duplicar o mesmo compromisso ao cruzar vários calendários (ex.: aceito em dois).
+     * Instâncias de recorrência têm mesmo iCalUID mas início diferente — a chave inclui o início.
+     */
+    private static String chaveDedupEvento(Event ev, String calendarId) {
+        String inicio = fingerprintInicio(ev);
+        String ical = ev.getICalUID();
+        if (ical != null && !ical.isBlank()) {
+            return ical.trim().toLowerCase(Locale.ROOT) + "|" + inicio;
         }
-        String type = ev.getEventType();
-        if (type == null || type.isBlank()) {
-            return true;
+        String eid = ev.getId();
+        if (eid != null && !eid.isBlank()) {
+            return calendarId + "/" + eid;
         }
-        return switch (type.trim().toLowerCase(Locale.ROOT)) {
-            case "workinglocation", "focustime" -> false;
-            default -> true;
-        };
+        return calendarId + "/" + System.identityHashCode(ev);
+    }
+
+    private static String fingerprintInicio(Event ev) {
+        if (ev.getStart() == null) {
+            return "";
+        }
+        if (ev.getStart().getDateTime() != null) {
+            return String.valueOf(ev.getStart().getDateTime().getValue());
+        }
+        if (ev.getStart().getDate() != null) {
+            return ev.getStart().getDate().toString();
+        }
+        return "";
     }
 
     public void deletarEvento(String googleEventId, String accessToken) throws Exception {
