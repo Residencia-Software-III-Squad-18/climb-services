@@ -107,7 +107,7 @@ public class UsuarioService {
         usuario.setCpf(cpf);
         usuario.setEmail(email);
         usuario.setContato(contato);
-        usuario.setSituacao("ATIVO");
+        usuario.setSituacao("INATIVO"); // Solicitação de acesso via Google: começa INATIVO
         usuario.setCargo(cargo);
         usuario.setSenhaHash(passwordEncoder.encode(senha));
 
@@ -153,13 +153,8 @@ public class UsuarioService {
         String senhaHash = passwordEncoder.encode(dto.getSenha());
         usuario.setSenhaHash(senhaHash);
 
-        if (dto.getSituacao() == null) {
-            usuario.setSituacao("ATIVO");
-        } else if (!dto.getSituacao().equals("ATIVO") && !dto.getSituacao().equals("INATIVO")) {
-            throw new RuntimeException("Situação inválida");
-        } else {
-            usuario.setSituacao(dto.getSituacao());
-        }
+        // Solicitação de acesso: usuário começa INATIVO até aprovação do admin
+        usuario.setSituacao("INATIVO");
 
         if (dto.getCargoId() != null) {
             Cargo cargo = cargoRepository.findById(dto.getCargoId())
@@ -173,6 +168,11 @@ public class UsuarioService {
         Usuario salvo = repository.save(usuario);
 
         return toResponseDTO(salvo);
+    }
+
+    public String criarSolicitacaoAcesso(UsuarioRequestDTO dto) {
+        criar(dto); // Reutiliza a lógica de criação, mas retorna mensagem
+        return "Solicitação de acesso enviada com sucesso. Aguarde aprovação do administrador.";
     }
 
     public UsuarioResponseDTO atualizar(Long id, UsuarioRequestDTO dto) {
@@ -223,5 +223,26 @@ public class UsuarioService {
     public void deletar(Long id) {
         Usuario usuario = buscarPorId(id);
         repository.delete(usuario);
+    }
+
+    public UsuarioResponseDTO aprovarUsuario(Long id) {
+        Usuario usuario = buscarPorId(id);
+
+        if (!"INATIVO".equals(usuario.getSituacao())) {
+            throw new RuntimeException("Usuário já está ativo ou situação inválida");
+        }
+
+        usuario.setSituacao("ATIVO");
+        Usuario atualizado = repository.save(usuario);
+
+        return toResponseDTO(atualizado);
+    }
+
+    public List<UsuarioResponseDTO> listarUsuariosPendentes() {
+        return repository.findAll()
+                .stream()
+                .filter(u -> "INATIVO".equals(u.getSituacao()))
+                .map(this::toResponseDTO)
+                .toList();
     }
 }
