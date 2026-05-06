@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -78,15 +79,14 @@ class AuthControllerTest {
         request.setSenha("SenhaForte123!");
         request.setCargoId(1L);
 
-        LoginResponseDTO response = criarLoginResponse();
-        when(googleOAuthService.concluirCadastro(any(CompleteGoogleRegistrationRequestDTO.class))).thenReturn(response);
+        doNothing().when(googleOAuthService).concluirCadastro(any(CompleteGoogleRegistrationRequestDTO.class));
 
         mockMvc.perform(post("/auth/google/complete-registration")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
+                .andExpect(jsonPath("$.data").value("Solicitação de acesso enviada com sucesso. Aguarde aprovação do administrador."));
 
         verify(googleOAuthService).concluirCadastro(any(CompleteGoogleRegistrationRequestDTO.class));
     }

@@ -96,11 +96,11 @@ public class AuthController {
     }
 
     @PostMapping("/google/complete-registration")
-    public ResponseEntity<ApiResponse<LoginResponseDTO>> completeGoogleRegistration(
+    public ResponseEntity<ApiResponse<String>> completeGoogleRegistration(
             @RequestBody CompleteGoogleRegistrationRequestDTO dto) {
         try {
-            LoginResponseDTO response = googleOAuthService.concluirCadastro(dto);
-            return ResponseEntity.ok(ApiResponse.ok(response, "Cadastro Google concluido com sucesso"));
+            googleOAuthService.concluirCadastro(dto);
+            return ResponseEntity.ok(ApiResponse.ok("Solicitação de acesso enviada com sucesso. Aguarde aprovação do administrador.", "Cadastro Google concluido com sucesso"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
         }

@@ -320,7 +320,7 @@ public class GoogleOAuthService {
     }
 
     @Transactional
-    public LoginResponseDTO concluirCadastro(CompleteGoogleRegistrationRequestDTO dto) {
+    public void concluirCadastro(CompleteGoogleRegistrationRequestDTO dto) {
         if (dto.getPendingToken() == null || dto.getPendingToken().isBlank()) {
             throw new RuntimeException("Pending token obrigatorio");
         }
@@ -362,7 +362,7 @@ public class GoogleOAuthService {
         pending.setConsumido(true);
         pendingRegistrationRepository.save(pending);
 
-        return authenticationService.gerarRespostaLogin(usuario);
+        // Não gerar resposta de login - aguardar aprovação do admin
     }
 
     @Transactional
@@ -492,7 +492,7 @@ public class GoogleOAuthService {
         usuario.setEmail(normalizedEmail);
         usuario.setContato("");
         usuario.setSenhaHash("GOOGLE_OAUTH_" + UUID.randomUUID());
-        usuario.setSituacao("ATIVO");
+        usuario.setSituacao("INATIVO"); // Novo fluxo: usuários Google também começam INATIVO até aprovação
         usuario.setCargo(cargo);
 
         return usuarioRepository.save(usuario);
