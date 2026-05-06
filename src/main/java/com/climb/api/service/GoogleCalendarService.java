@@ -1,6 +1,7 @@
 package com.climb.api.service;
 
 import com.climb.api.model.Reuniao;
+import com.climb.api.util.LogSanitizer;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.json.gson.GsonFactory;
@@ -107,6 +108,8 @@ public class GoogleCalendarService {
     }
 
     public List<Event> listarEventosPrimarios(String accessToken, Instant timeMin, Instant timeMax) throws Exception {
+        log.info("GoogleCalendarService.listarEventosPrimarios — token: {}, janela {} .. {}",
+                LogSanitizer.googleAccessTokenForLog(accessToken), timeMin, timeMax);
         Calendar.Events.List request = buildCalendar(accessToken).events().list("primary");
         request.setTimeMin(new DateTime(timeMin.toEpochMilli()));
         request.setTimeMax(new DateTime(timeMax.toEpochMilli()));
@@ -117,9 +120,8 @@ public class GoogleCalendarService {
         List<Event> filtrados = items.stream()
                 .filter(GoogleCalendarService::incluirNaMesclaComClimb)
                 .toList();
-        if (log.isDebugEnabled()) {
-            log.debug("Google Calendar list(primary): {} itens da API, {} após filtro de mescla", items.size(), filtrados.size());
-        }
+        log.info("GoogleCalendarService.listarEventosPrimarios — calendarId=primary: {} itens da API, {} após filtro incluirNaMesclaComClimb",
+                items.size(), filtrados.size());
         return filtrados;
     }
 

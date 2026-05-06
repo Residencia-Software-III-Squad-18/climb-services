@@ -3,6 +3,7 @@ package com.climb.api.service;
 import com.climb.api.model.Reuniao;
 import com.climb.api.model.dto.ReuniaoListItemDTO;
 import com.climb.api.repository.ReuniaoRepository;
+import com.climb.api.util.LogSanitizer;
 import com.google.api.services.calendar.model.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,45 +33,73 @@ public class ReuniaoService {
 
     public List<ReuniaoListItemDTO> listar(String googleAccessToken) {
         List<Reuniao> reunioes = repository.findAll();
+        log.info("ReuniaoService.listar — token Google: {}, reunioes no banco: {}",
+                LogSanitizer.googleAccessTokenForLog(googleAccessToken), reunioes.size());
 
         if (googleAccessToken == null || googleAccessToken.isBlank()) {
+            int comGoogleId = (int) reunioes.stream()
+                    .map(Reuniao::getGoogleEventId)
+                    .filter(id -> id != null && !id.isBlank())
+                    .count();
+            log.info("ReuniaoService.listar — modo só-banco (sem mescla Calendar). Reuniões com googleEventId: {}", comGoogleId);
             return reunioes.stream().map(ReuniaoListItemDTO::fromEntity).toList();
         }
 
         List<Reuniao> filtradas = reunioes.stream()
                 .filter(reuniao -> sincronizarEventoGoogle(reuniao, googleAccessToken))
                 .toList();
+        if (filtradas.size() != reunioes.size()) {
+            log.info("ReuniaoService.listar — após sincronizar com Google: {} de {} reunioes locais mantidas",
+                    filtradas.size(), reunioes.size());
+        }
 
         Set<String> idsGoogleJaNoClimb = filtradas.stream()
                 .map(Reuniao::getGoogleEventId)
                 .filter(id -> id != null && !id.isBlank())
                 .collect(Collectors.toCollection(HashSet::new));
+        log.info("ReuniaoService.listar — ids Google já ligados ao Climb (dedup externos): {}", idsGoogleJaNoClimb.size());
 
         List<ReuniaoListItemDTO> resultado = new ArrayList<>(filtradas.stream()
                 .map(ReuniaoListItemDTO::fromEntity)
                 .toList());
+        int baseDtoCount = resultado.size();
 
         try {
             Instant min = Instant.now().minus(90, ChronoUnit.DAYS);
             Instant max = Instant.now().plus(365, ChronoUnit.DAYS);
+            log.info("ReuniaoService.listar — janela Calendar: {} .. {}", min, max);
             List<Event> externos = googleCalendarService.listarEventosPrimarios(googleAccessToken, min, max);
+            int skippedNullOuCancelados = 0;
+            int skippedSemGoogleId = 0;
+            int skippedJaVinculadoNoClimb = 0;
+            int added = 0;
             for (Event ev : externos) {
                 if (ev == null || "cancelled".equalsIgnoreCase(ev.getStatus())) {
+                    skippedNullOuCancelados++;
                     continue;
                 }
                 String gid = ev.getId();
-                if (gid == null || idsGoogleJaNoClimb.contains(gid)) {
+                if (gid == null) {
+                    skippedSemGoogleId++;
+                    continue;
+                }
+                if (idsGoogleJaNoClimb.contains(gid)) {
+                    skippedJaVinculadoNoClimb++;
                     continue;
                 }
                 resultado.add(ReuniaoListItemDTO.fromGoogleEventExterno(ev));
+                added++;
             }
+            log.info("ReuniaoService.listar — mescla: {} eventos Google (pós-filtro Calendar); skip null/cancelados={}; skip sem id={}; skip já no Climb={}; adicionados={}",
+                    externos.size(), skippedNullOuCancelados, skippedSemGoogleId, skippedJaVinculadoNoClimb, added);
         } catch (Exception e) {
-            log.warn("Não foi possível mesclar eventos externos do Google Calendar: {}", e.getMessage());
+            log.warn("Não foi possível mesclar eventos externos do Google Calendar: {} — {}", e.getClass().getSimpleName(), e.getMessage(), e);
         }
 
         resultado.sort(Comparator
                 .comparing(ReuniaoListItemDTO::getData, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(ReuniaoListItemDTO::getHora, Comparator.nullsLast(Comparator.naturalOrder())));
+        log.info("ReuniaoService.listar — resposta final: {} itens ({} do banco + externos mesclados)", resultado.size(), baseDtoCount);
         return resultado;
     }
 
