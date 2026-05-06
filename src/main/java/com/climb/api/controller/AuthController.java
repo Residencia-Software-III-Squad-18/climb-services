@@ -10,6 +10,9 @@ import com.climb.api.model.dto.LoginResponseDTO;
 import com.climb.api.model.dto.RefreshTokenRequestDTO;
 import com.climb.api.service.AuthenticationService;
 import com.climb.api.service.GoogleOAuthService;
+import com.climb.api.util.LogSanitizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +28,8 @@ import java.net.URI;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthenticationService authenticationService;
     private final GoogleOAuthService googleOAuthService;
@@ -68,6 +73,9 @@ public class AuthController {
     public ResponseEntity<Void> googleCallback(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String error) {
+        log.info("GET /auth/google/callback — error param: {}, authorization code: {}",
+                error == null || error.isBlank() ? "absent" : "present(length=" + error.length() + ")",
+                LogSanitizer.oauthCodeForLog(code));
         try {
             if (error != null && !error.isBlank()) {
                 URI redirectUri = googleOAuthService.gerarRedirecionamentoErro("Google retornou erro: " + error);
@@ -109,6 +117,7 @@ public class AuthController {
     @PostMapping("/exchange")
     public ResponseEntity<ApiResponse<ExchangeCodeResponseDTO>> exchangeCode(
             @RequestBody ExchangeCodeRequestDTO dto) {
+        log.info("POST /auth/exchange — exchange code: {}", LogSanitizer.oauthCodeForLog(dto.code()));
         try {
             ExchangeCodeResponseDTO response = googleOAuthService.exchangeCode(dto.code());
             return ResponseEntity.ok(ApiResponse.ok(response, "Tokens obtidos com sucesso"));

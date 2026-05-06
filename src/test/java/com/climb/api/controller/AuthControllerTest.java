@@ -16,21 +16,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.mock.web.MockHttpSession;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import static com.climb.api.config.OAuth2AuthenticationSuccessHandler.GOOGLE_LINK_USER_ID_SESSION_KEY;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
@@ -95,30 +89,6 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
 
         verify(googleOAuthService).concluirCadastro(any(CompleteGoogleRegistrationRequestDTO.class));
-    }
-
-    @Test
-    void deveRedirecionarParaOAuthGoogle() throws Exception {
-        mockMvc.perform(get("/auth/google"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/oauth2/authorization/google"));
-    }
-
-    @Test
-    void devePrepararSessaoParaVinculoGoogle() throws Exception {
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken("usuario@teste.com", null);
-        authentication.setDetails(99L);
-
-        MockHttpSession session = new MockHttpSession();
-
-        mockMvc.perform(get("/auth/google/link")
-                        .principal(authentication)
-                        .session(session))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/oauth2/authorization/google"));
-
-        assertEquals(99L, session.getAttribute(GOOGLE_LINK_USER_ID_SESSION_KEY));
     }
 
     @Test

@@ -19,6 +19,9 @@ import com.climb.api.repository.OAuth2ExchangeCodeRepository;
 import com.climb.api.repository.OAuth2PendingRegistrationRepository;
 import com.climb.api.repository.UsuarioOAuthRepository;
 import com.climb.api.repository.UsuarioRepository;
+import com.climb.api.util.LogSanitizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +42,8 @@ import java.util.UUID;
 
 @Service
 public class GoogleOAuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(GoogleOAuthService.class);
 
     // Status constants for OAuth2 login flow
     public static final String STATUS_LOGIN_SUCCESS = "LOGIN_SUCCESS";
@@ -205,6 +210,7 @@ public class GoogleOAuthService {
 
     @Transactional
     public ExchangeCodeResponseDTO exchangeCode(String code) {
+        log.info("GoogleOAuthService.exchangeCode — código: {}", LogSanitizer.oauthCodeForLog(code));
         limparExchangeCodesExpirados();
 
         OAuth2ExchangeCode exchangeCode = exchangeCodeRepository
@@ -212,6 +218,7 @@ public class GoogleOAuthService {
                 .orElseThrow(() -> new RuntimeException("Codigo invalido ou expirado"));
 
         if (exchangeCode.getExpiraEm().isBefore(LocalDateTime.now())) {
+            log.warn("GoogleOAuthService.exchangeCode — código expirado (expiraEm={})", exchangeCode.getExpiraEm());
             throw new RuntimeException("Codigo expirado");
         }
 
@@ -227,6 +234,11 @@ public class GoogleOAuthService {
             usuario.setSituacao(exchangeCode.getUserStatus());
             usuario.setCargoNome(exchangeCode.getUserRole());
         }
+
+        log.info("GoogleOAuthService.exchangeCode — sucesso: userId={}, googleAccessToken={}, appAccessToken length={}",
+                exchangeCode.getUserId(),
+                LogSanitizer.googleAccessTokenForLog(exchangeCode.getGoogleAccessToken()),
+                exchangeCode.getAccessToken() != null ? exchangeCode.getAccessToken().length() : 0);
 
         return new ExchangeCodeResponseDTO(
                 exchangeCode.getAccessToken(),
