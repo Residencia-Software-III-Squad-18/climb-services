@@ -8,12 +8,15 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Data
 public class ReuniaoListItemDTO {
 
     private Long idReuniao;
     private String titulo;
+    /** ISO-8601 com offset (ex.: America/Fortaleza) — mesmo contrato do front em feature/integration-pages. */
+    private String dataHora;
     private LocalDate data;
     private LocalTime hora;
     private Long empresaId;
@@ -41,6 +44,7 @@ public class ReuniaoListItemDTO {
         d.setPauta(r.getPauta());
         d.setStatus(r.getStatus());
         d.setGoogleEventId(r.getGoogleEventId());
+        d.setDataHora(buildDataHoraIso(r.getData(), r.getHora()));
         return d;
     }
 
@@ -57,6 +61,7 @@ public class ReuniaoListItemDTO {
         if (inicio != null) {
             d.setData(inicio.toLocalDate());
             d.setHora(inicio.toLocalTime().withNano(0));
+            d.setDataHora(inicio.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
         }
 
         d.setEmpresaId(0L);
@@ -97,5 +102,13 @@ public class ReuniaoListItemDTO {
             }
         }
         return null;
+    }
+
+    private static String buildDataHoraIso(LocalDate data, LocalTime hora) {
+        if (data == null || hora == null) {
+            return null;
+        }
+        ZonedDateTime zdt = ZonedDateTime.of(data, hora, ZONE);
+        return zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
 }
