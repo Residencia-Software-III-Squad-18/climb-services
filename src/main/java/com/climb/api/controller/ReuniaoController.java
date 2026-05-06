@@ -3,7 +3,6 @@ package com.climb.api.controller;
 import com.climb.api.model.Reuniao;
 import com.climb.api.model.dto.ReuniaoListItemDTO;
 import com.climb.api.service.ReuniaoService;
-import com.climb.api.util.LogSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
@@ -25,8 +24,12 @@ public class ReuniaoController {
     @GetMapping
     public List<ReuniaoListItemDTO> listar(
             @RequestHeader(value = "X-Google-Access-Token", required = false) String googleAccessToken) {
-        log.info("GET /reunioes — X-Google-Access-Token: {}", LogSanitizer.googleAccessTokenForLog(googleAccessToken));
-        return service.listar(googleAccessToken);
+        boolean comGoogle = googleAccessToken != null && !googleAccessToken.isBlank();
+        log.info("GET /reunioes — header Google: presente={}, tamanho={}",
+                comGoogle, comGoogle ? googleAccessToken.length() : 0);
+        List<ReuniaoListItemDTO> out = service.listar(googleAccessToken);
+        log.info("GET /reunioes — retornando {} itens", out.size());
+        return out;
     }
 
     @GetMapping("/{id}")

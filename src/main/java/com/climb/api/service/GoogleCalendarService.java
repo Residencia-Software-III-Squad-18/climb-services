@@ -108,8 +108,8 @@ public class GoogleCalendarService {
     }
 
     public List<Event> listarEventosPrimarios(String accessToken, Instant timeMin, Instant timeMax) throws Exception {
-        log.info("GoogleCalendarService.listarEventosPrimarios — token: {}, janela {} .. {}",
-                LogSanitizer.googleAccessTokenForLog(accessToken), timeMin, timeMax);
+        int tokenLen = accessToken != null ? accessToken.length() : 0;
+        log.info("GoogleCalendar list(primary) — tokenLen={}, janela {} .. {}", tokenLen, timeMin, timeMax);
         Calendar.Events.List request = buildCalendar(accessToken).events().list("primary");
         request.setTimeMin(new DateTime(timeMin.toEpochMilli()));
         request.setTimeMax(new DateTime(timeMax.toEpochMilli()));
@@ -120,8 +120,7 @@ public class GoogleCalendarService {
         List<Event> filtrados = items.stream()
                 .filter(GoogleCalendarService::incluirNaMesclaComClimb)
                 .toList();
-        log.info("GoogleCalendarService.listarEventosPrimarios — calendarId=primary: {} itens da API, {} após filtro incluirNaMesclaComClimb",
-                items.size(), filtrados.size());
+        log.info("GoogleCalendar list(primary) — api={}, após incluirNaMesclaComClimb={}", items.size(), filtrados.size());
         return filtrados;
     }
 
