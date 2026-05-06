@@ -10,6 +10,8 @@ import com.google.api.services.calendar.model.*;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import com.google.api.client.util.DateTime;
 
@@ -23,6 +25,8 @@ import java.util.UUID;
 
 @Service
 public class GoogleCalendarService {
+
+    private static final Logger log = LoggerFactory.getLogger(GoogleCalendarService.class);
 
     public String criarEvento(Reuniao reuniao, String accessToken) throws Exception {
         Event created = buildCalendar(accessToken).events()
@@ -110,24 +114,36 @@ public class GoogleCalendarService {
         request.setOrderBy("startTime");
         Events events = request.execute();
         List<Event> items = events.getItems() != null ? events.getItems() : List.of();
-        return items.stream().filter(GoogleCalendarService::isUserCreatedStyleEvent).toList();
+        List<Event> filtrados = items.stream()
+                .filter(GoogleCalendarService::incluirNaMesclaComClimb)
+                .toList();
+        if (log.isDebugEnabled()) {
+            log.debug("Google Calendar list(primary): {} itens da API, {} após filtro de mescla", items.size(), filtrados.size());
+        }
+        return filtrados;
     }
 
     /**
-     * {@code events().list("primary")} also returns Google's synthetic entries (working location,
-     * focus time, out of office, birthdays) that are easy to miss in the Calendar UI but look like
-     * real rows in our merge — e.g. all-day "Home" on every weekday at 00:00.
+     * Inclui na mescla com o Climb tudo que tem início válido, exceto tipos sintéticos do Google que
+     * costumam poluir a agenda como "00:00 Home" ({@code workingLocation}) ou blocos de foco.
+     * <p>
+     * Não filtramos {@code birthday}, {@code outOfOffice}, {@code fromGmail} nem {@code default} —
+     * filtrar isso removeu eventos reais em alguns tenants.
      */
-    private static boolean isUserCreatedStyleEvent(Event ev) {
+    private static boolean incluirNaMesclaComClimb(Event ev) {
         if (ev == null) {
+            return false;
+        }
+        EventDateTime start = ev.getStart();
+        if (start == null || (start.getDateTime() == null && start.getDate() == null)) {
             return false;
         }
         String type = ev.getEventType();
         if (type == null || type.isBlank()) {
             return true;
         }
-        return switch (type.toLowerCase(Locale.ROOT)) {
-            case "workinglocation", "focustime", "outofoffice", "birthday" -> false;
+        return switch (type.trim().toLowerCase(Locale.ROOT)) {
+            case "workinglocation", "focustime" -> false;
             default -> true;
         };
     }
