@@ -18,6 +18,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -108,7 +109,27 @@ public class GoogleCalendarService {
         request.setSingleEvents(true);
         request.setOrderBy("startTime");
         Events events = request.execute();
-        return events.getItems() != null ? events.getItems() : List.of();
+        List<Event> items = events.getItems() != null ? events.getItems() : List.of();
+        return items.stream().filter(GoogleCalendarService::isUserCreatedStyleEvent).toList();
+    }
+
+    /**
+     * {@code events().list("primary")} also returns Google's synthetic entries (working location,
+     * focus time, out of office, birthdays) that are easy to miss in the Calendar UI but look like
+     * real rows in our merge — e.g. all-day "Home" on every weekday at 00:00.
+     */
+    private static boolean isUserCreatedStyleEvent(Event ev) {
+        if (ev == null) {
+            return false;
+        }
+        String type = ev.getEventType();
+        if (type == null || type.isBlank()) {
+            return true;
+        }
+        return switch (type.toLowerCase(Locale.ROOT)) {
+            case "workinglocation", "focustime", "outofoffice", "birthday" -> false;
+            default -> true;
+        };
     }
 
     public void deletarEvento(String googleEventId, String accessToken) throws Exception {
