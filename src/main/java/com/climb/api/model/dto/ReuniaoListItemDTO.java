@@ -26,6 +26,8 @@ public class ReuniaoListItemDTO {
     private String pauta;
     private String status;
     private String googleEventId;
+    /** true quando o Google envia só {@code start.date} (evento de dia inteiro). */
+    private Boolean diaInteiro;
 
     private static final ZoneId ZONE = ZoneId.of("America/Fortaleza");
 
@@ -44,6 +46,7 @@ public class ReuniaoListItemDTO {
         d.setPauta(r.getPauta());
         d.setStatus(r.getStatus());
         d.setGoogleEventId(r.getGoogleEventId());
+        d.setDiaInteiro(false);
         d.setDataHora(buildDataHoraIso(r.getData(), r.getHora()));
         return d;
     }
@@ -56,6 +59,11 @@ public class ReuniaoListItemDTO {
         d.setIdReuniao(syntheticId(event.getId()));
         d.setTitulo(event.getSummary() != null ? event.getSummary() : "(Sem título)");
         d.setGoogleEventId(event.getId());
+        boolean diaInteiro =
+                event.getStart() != null
+                        && event.getStart().getDate() != null
+                        && event.getStart().getDateTime() == null;
+        d.setDiaInteiro(diaInteiro);
 
         ZonedDateTime inicio = instantInicio(event);
         if (inicio != null) {
