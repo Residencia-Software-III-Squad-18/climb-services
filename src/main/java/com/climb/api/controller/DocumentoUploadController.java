@@ -15,7 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/documentos")
-@Tag(name = "Upload de Documentos", description = "Endpoint público para envio de documentos pela empresa — não requer autenticação")
+@Tag(name = "Upload de Documentos", description = "Endpoint autenticados para envio de documentos")
 public class DocumentoUploadController {
 
 
@@ -27,7 +27,7 @@ public class DocumentoUploadController {
 
     @Operation(
             summary = "Enviar arquivo do documento",
-            description = "A empresa envia o arquivo PDF através do link recebido. Não requer autenticação. O status é atualizado automaticamente para EM_ANALISE."
+            description = "A empresa envia o arquivo através do link recebido. O status é atualizado automaticamente para EM_ANALISE."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Arquivo enviado com sucesso"),
