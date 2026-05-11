@@ -49,8 +49,8 @@ public class Usuario {
     @ManyToMany
     @JoinTable(
         name = "usuario_permissoes",
-        joinColumns = @JoinColumn(name = "usuario_id"),
-        inverseJoinColumns = @JoinColumn(name = "permissao_id")
+        joinColumns = @JoinColumn(name = "id_usuario"),
+        inverseJoinColumns = @JoinColumn(name = "id_permissao")
     )
     private Set<Permissao> permissoes = new HashSet<>();
 
