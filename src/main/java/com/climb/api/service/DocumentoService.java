@@ -100,10 +100,10 @@ public class DocumentoService {
 
     // Salvar o Arquivo
     // Nesse momento está salvando localmente
-    // Depois deve ser integrado com o google drive
+    // Depois deve ser integrado com a nuvem
     private String salvarArquivo(MultipartFile arquivo) {
         try {
-            validarArquivo(arquivo); // Cancela aqui se corrompido
+            validarArquivo(arquivo);
 
             Path pasta = Paths.get("uploads/documentos");
             if (!Files.exists(pasta)) {

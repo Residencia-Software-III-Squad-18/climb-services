@@ -19,7 +19,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/documentos")
-@Tag(name = "Documentos", description = "Endpoints internos de gestão documental")
+@Tag(name = "Documentos", description = "Endpoints internos de gestão documental ")
 public class DocumentoController {
 
     private final DocumentoService documentoService;
