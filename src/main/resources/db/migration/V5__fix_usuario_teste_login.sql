@@ -15,3 +15,6 @@ ON DUPLICATE KEY UPDATE
     senha_hash = VALUES(senha_hash),
     situacao = VALUES(situacao),
     cargo_id = VALUES(cargo_id);
+
+
+    
