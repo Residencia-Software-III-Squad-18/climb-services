@@ -2,11 +2,15 @@ package com.climb.api.controller;
 
 import java.util.List;
 
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.climb.api.model.PermissaoCodigo;
 import com.climb.api.model.dto.UsuarioRequestDTO;
 import com.climb.api.model.dto.UsuarioResponseDTO;
+import com.climb.api.service.RbacService;
 import com.climb.api.service.UsuarioService;
 
 @RestController
@@ -14,9 +18,11 @@ import com.climb.api.service.UsuarioService;
 public class UsuarioController {
 
     private final UsuarioService service;
+    private final RbacService rbacService;
 
-    public UsuarioController(UsuarioService service) {
+    public UsuarioController(UsuarioService service, RbacService rbacService) {
         this.service = service;
+        this.rbacService = rbacService;
     }
 
     @GetMapping
@@ -24,10 +30,9 @@ public class UsuarioController {
         return service.listar();
     }
 
-    // Endpoints para administração de solicitações de acesso
-    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/pendentes")
     public List<UsuarioResponseDTO> listarUsuariosPendentes() {
+        exigirPermissao(PermissaoCodigo.PERMITIR_ACESSO);
         return service.listarUsuariosPendentes();
     }
 
@@ -52,9 +57,16 @@ public class UsuarioController {
         service.deletar(id);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/aprovar")
     public UsuarioResponseDTO aprovarUsuario(@PathVariable Long id) {
+        exigirPermissao(PermissaoCodigo.PERMITIR_ACESSO);
         return service.aprovarUsuario(id);
+    }
+
+    private void exigirPermissao(PermissaoCodigo permissao) {
+        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getDetails();
+        if (!rbacService.temPermissao(userId, permissao)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Sem permissão: " + permissao);
+        }
     }
 }
