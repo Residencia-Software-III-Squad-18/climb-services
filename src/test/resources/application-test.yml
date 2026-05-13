@@ -8,6 +8,9 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
+app:
+  contract-notifications:
+    expiration-cron: "-"
 
 google:
   calendar:
