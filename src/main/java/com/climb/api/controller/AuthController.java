@@ -87,8 +87,7 @@ public class AuthController {
                 return redirect(redirectUri);
             }
 
-            var response = googleOAuthService.trocarCodePorToken(code);
-            URI redirectUri = googleOAuthService.gerarRedirecionamentoFrontend(response);
+            URI redirectUri = googleOAuthService.resolverCallbackGoogle(code);
             return redirect(redirectUri);
 
         } catch (RuntimeException e) {
