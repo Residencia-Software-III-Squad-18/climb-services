@@ -130,11 +130,9 @@ class GoogleOAuthServiceTest {
         when(usuarioService.buscarPorEmail("novo@teste.com")).thenReturn(null);
         when(usuarioService.criarViaGoogle("Novo Usuario", "novo@teste.com", "12345678900", "85999999999", "SenhaForte123!", 1L))
                 .thenReturn(novoUsuario);
-        when(authenticationService.gerarRespostaLogin(novoUsuario)).thenReturn(loginResponse);
 
-        LoginResponseDTO response = googleOAuthService.concluirCadastro(dto);
+        googleOAuthService.concluirCadastro(dto);
 
-        assertEquals("access-token", response.getAccessToken());
         verify(usuarioOAuthRepository).save(any(UsuarioOAuth.class));
         verify(pendingRegistrationRepository).save(any(OAuth2PendingRegistration.class));
     }
