@@ -1,7 +1,12 @@
 package com.climb.api.controller;
 
 import com.climb.api.model.Relatorio;
+import com.climb.api.model.dto.RelatorioPdfDownloadDTO;
 import com.climb.api.service.RelatorioService;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +26,11 @@ public class RelatorioController {
         return service.listar();
     }
 
+    @GetMapping("/contrato/{contratoId}")
+    public List<Relatorio> listarPorContrato(@PathVariable Long contratoId) {
+        return service.listarPorContrato(contratoId);
+    }
+
     @GetMapping("/{id}")
     public Relatorio buscarPorId(@PathVariable Long id) {
         return service.buscarPorId(id);
@@ -34,6 +44,29 @@ public class RelatorioController {
     @PutMapping("/{id}")
     public Relatorio atualizar(@PathVariable Long id, @RequestBody Relatorio atualizado) {
         return service.atualizar(id, atualizado);
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> visualizarPdf(@PathVariable Long id) {
+        RelatorioPdfDownloadDTO pdf = service.obterPdfInline(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().filename(pdf.nomeArquivo()).build().toString())
+                .body(pdf.conteudo());
+    }
+
+    @GetMapping("/{id}/download")
+    public ResponseEntity<byte[]> baixarPdf(@PathVariable Long id) {
+        RelatorioPdfDownloadDTO pdf = service.obterPdfParaDownload(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(pdf.nomeArquivo()).build().toString())
+                .body(pdf.conteudo());
+    }
+
+    @PostMapping("/{id}/exportar-pdf")
+    public Relatorio exportarPdf(@PathVariable Long id) {
+        return service.exportarPdf(id);
     }
 
     @DeleteMapping("/{id}")
