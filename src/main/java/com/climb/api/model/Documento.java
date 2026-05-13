@@ -1,5 +1,6 @@
 package com.climb.api.model;
 
+import com.climb.api.model.enums.DocumentoStatus;
 import jakarta.persistence.*;
 
 @Entity
@@ -21,8 +22,9 @@ public class Documento {
     @Column(name = "url")
     private String url;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "validado")
-    private String validado;
+    private DocumentoStatus validado;
 
     @ManyToOne
     @JoinColumn(name = "analista_id")
@@ -40,8 +42,8 @@ public class Documento {
     public String getUrl() { return url; }
     public void setUrl(String url) { this.url = url; }
 
-    public String getValidado() { return validado; }
-    public void setValidado(String validado) { this.validado = validado; }
+    public DocumentoStatus getValidado() { return validado; }
+    public void setValidado(DocumentoStatus validado) { this.validado = validado; }
 
     public Usuario getAnalista() { return analista; }
     public void setAnalista(Usuario analista) { this.analista = analista; }

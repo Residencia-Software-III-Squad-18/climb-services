@@ -17,11 +17,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class UsuarioService {
 
     private final UsuarioRepository repository;
+    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final CargoRepository cargoRepository;
-
-    public UsuarioService(UsuarioRepository repository, PasswordEncoder passwordEncoder, CargoRepository cargoRepository) {
+        
+    public UsuarioService(UsuarioRepository repository, EmailService emailService, PasswordEncoder passwordEncoder, CargoRepository cargoRepository) {
         this.repository = repository;
+        this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.cargoRepository = cargoRepository;
     }
@@ -88,7 +90,7 @@ public class UsuarioService {
         if (cargoId == null) {
             throw new RuntimeException("Cargo e obrigatorio");
         }
-
+        
         if (repository.findByCpf(cpf).isPresent()) {
             throw new RuntimeException("CPF ja cadastrado");
         }
@@ -109,7 +111,10 @@ public class UsuarioService {
         usuario.setCargo(cargo);
         usuario.setSenhaHash(passwordEncoder.encode(senha));
 
-        return repository.save(usuario);
+        Usuario salvo = repository.save(usuario);
+        emailService.enviarEmailBoasVindas(salvo.getEmail(), salvo.getNomeCompleto());
+        
+        return salvo;
     }
 
     public UsuarioResponseDTO criar(UsuarioRequestDTO dto) {
