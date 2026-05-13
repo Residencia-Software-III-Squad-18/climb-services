@@ -14,7 +14,7 @@ public interface RelatorioMapper {
 
     RelatorioMapper INSTANCE = Mappers.getMapper(RelatorioMapper.class);
 
-    @Mapping(target = "contratoId", source = "contrato.id")
+    @Mapping(target = "contratoId", source = "contrato.idContrato")
     RelatorioResponseDTO toResponseDto(Relatorio relatorio);
 
     @Mapping(target = "idRelatorio", ignore = true)
