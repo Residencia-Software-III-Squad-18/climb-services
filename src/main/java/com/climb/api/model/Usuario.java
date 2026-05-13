@@ -2,6 +2,7 @@ package com.climb.api.model;
 
 import jakarta.persistence.*;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -31,9 +32,11 @@ public class Usuario {
     private String contato;
 
     @Column(nullable = false)
+    @JsonIgnore
     private String senhaHash;
 
     @Transient
+    @JsonIgnore
     private String senha;
 
     @Column(nullable = false, length = 50)
@@ -46,8 +49,8 @@ public class Usuario {
     @ManyToMany
     @JoinTable(
         name = "usuario_permissoes",
-        joinColumns = @JoinColumn(name = "usuario_id"),
-        inverseJoinColumns = @JoinColumn(name = "permissao_id")
+        joinColumns = @JoinColumn(name = "id_usuario"),
+        inverseJoinColumns = @JoinColumn(name = "id_permissao")
     )
     private Set<Permissao> permissoes = new HashSet<>();
 
