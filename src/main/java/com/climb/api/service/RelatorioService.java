@@ -11,11 +11,16 @@ import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperExportManager;
 import net.sf.jasperreports.engine.JasperFillManager;
 import net.sf.jasperreports.engine.JasperPrint;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
@@ -49,6 +54,80 @@ public class RelatorioService {
         this.repository = repository;
         this.contratoRepository = contratoRepository;
         this.pastaRelatorios = Paths.get(pastaRelatorios);
+    }
+
+    public Relatorio uploadPdf(Long id, MultipartFile file) {
+        Relatorio relatorio = buscarPorId(id);
+
+        byte[] conteudo = validarPdf(file);
+
+        Path caminho = resolverCaminhoPdf(relatorio.getIdRelatorio());
+
+        try {
+            Files.createDirectories(caminho.getParent());
+
+            Files.write(
+                    caminho,
+                    conteudo,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING
+            );
+        } catch (IOException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Nao foi possivel salvar o PDF do relatorio"
+            );
+        }
+
+        relatorio.setUrlPdf(caminho.toString());
+
+        if (relatorio.getDataEnvio() == null) {
+            relatorio.setDataEnvio(LocalDate.now());
+        }
+
+        return repository.save(relatorio);
+    }
+
+    private byte[] validarPdf(MultipartFile arquivo) {
+        if (arquivo == null || arquivo.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Arquivo PDF e obrigatorio"
+            );
+        }
+
+        try {
+            byte[] conteudo = arquivo.getBytes();
+
+            Tika tika = new Tika();
+            String tipo = tika.detect(conteudo);
+
+            if (!MediaType.APPLICATION_PDF_VALUE.equals(tipo)) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Arquivo deve ser um PDF"
+                );
+            }
+
+            try (PDDocument doc = Loader.loadPDF(conteudo)) {
+                if (doc.getNumberOfPages() == 0) {
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "PDF invalido ou corrompido"
+                    );
+                }
+            }
+
+            return conteudo;
+
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "PDF invalido ou corrompido"
+            );
+        }
     }
 
     public List<Relatorio> listar() {

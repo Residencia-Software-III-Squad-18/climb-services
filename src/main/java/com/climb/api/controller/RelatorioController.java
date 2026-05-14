@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -19,6 +20,14 @@ public class RelatorioController {
 
     public RelatorioController(RelatorioService service) {
         this.service = service;
+    }
+
+    @PostMapping(value = "/{id}/upload-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Relatorio uploadPdf(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return service.uploadPdf(id, file);
     }
 
     @GetMapping
@@ -46,7 +55,7 @@ public class RelatorioController {
         return service.atualizar(id, atualizado);
     }
 
-    @GetMapping("/{id}/pdf")
+    @GetMapping("/{id}/visualizar-pdf")
     public ResponseEntity<byte[]> visualizarPdf(@PathVariable Long id) {
         RelatorioPdfDownloadDTO pdf = service.obterPdfInline(id);
         return ResponseEntity.ok()
