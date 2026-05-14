@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 
-public record PropostaRequestDTO(
+public record PropostaUpdateDTO(
         @NotNull Long empresaId,
         @NotNull Long usuarioId,
         @NotNull @ValidPropostaStatus PropostaStatus status,

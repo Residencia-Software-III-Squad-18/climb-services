@@ -2,8 +2,10 @@ package com.climb.api.service;
 
 import com.climb.api.model.Empresa;
 import com.climb.api.model.Proposta;
+import com.climb.api.model.enums.PropostaStatus;
 import com.climb.api.model.Usuario;
 import com.climb.api.model.PermissaoCodigo;
+import com.climb.api.model.dto.PropostaAprovacaoRequestDTO;
 import com.climb.api.model.dto.PropostaRequestDTO;
 import com.climb.api.model.dto.PropostaResponseDTO;
 import com.climb.api.repository.EmpresaRepository;
@@ -66,8 +68,8 @@ public class PropostaService {
         return toResponseDTO(proposta);
     }
 
-    public List<PropostaResponseDTO> listarPorStatus(String status) {
-        if (status == null || status.isBlank()) {
+    public List<PropostaResponseDTO> listarPorStatus(PropostaStatus status) {
+        if (status == null) {
             throw new RuntimeException("Status é obrigatório");
         }
 
@@ -82,7 +84,7 @@ public class PropostaService {
         if (dto.usuarioId() == null || !rbacService.temPermissao(dto.usuarioId(), PermissaoCodigo.PROPOSTA_CRUD)) {
             throw new RuntimeException("Usuário não tem permissão para criar propostas");
         }
-        validarStatus(dto.status());
+        validarStatusParaCriacao(dto.status());
 
         Proposta proposta = new Proposta();
         proposta.setEmpresa(buscarEmpresa(dto.empresaId()));
@@ -93,12 +95,29 @@ public class PropostaService {
         return toResponseDTO(repository.save(proposta));
     }
 
+    public PropostaResponseDTO aprovar(Long id, PropostaAprovacaoRequestDTO dto) {
+        if (dto.status() == null) {
+            throw new RuntimeException("Status é obrigatório");
+        }
+
+        if (dto.status() == PropostaStatus.PENDENTE) {
+            throw new RuntimeException("Status inválido para aprovação");
+        }
+
+        Proposta proposta = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Proposta não encontrada"));
+
+        proposta.setStatus(dto.status());
+
+        return toResponseDTO(repository.save(proposta));
+    }
+
     public PropostaResponseDTO atualizar(Long id, PropostaRequestDTO dto) {
         // exige permissão para editar propostas
         if (dto.usuarioId() == null || !rbacService.temPermissao(dto.usuarioId(), PermissaoCodigo.PROPOSTA_CRUD)) {
             throw new RuntimeException("Usuário não tem permissão para editar propostas");
         }
-        validarStatus(dto.status());
+        validarStatusParaAtualizacao(dto.status());
 
         Proposta proposta = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proposta não encontrada"));
@@ -118,9 +137,38 @@ public class PropostaService {
         repository.deleteById(id);
     }
 
-    private void validarStatus(String status) {
-        if (status == null || status.isBlank()) {
+    private void validarStatus(PropostaStatus status) {
+        if (status == null) {
             throw new RuntimeException("Status é obrigatório");
         }
+        
+        // Valida se é um dos status permitidos do enum PropostaStatus
+        boolean statusValido = false;
+        for (PropostaStatus s : PropostaStatus.values()) {
+            if (s.equals(status)) {
+                statusValido = true;
+                break;
+            }
+        }
+        
+        if (!statusValido) {
+            throw new RuntimeException("Status inválido. Status permitidos: PENDENTE, APROVADA, REJEITADA");
+        }
+    }
+
+    private void validarStatusParaCriacao(PropostaStatus status) {
+        validarStatus(status);
+        
+        // Ao criar uma proposta, o status inicial deve ser PENDENTE
+        if (status != PropostaStatus.PENDENTE) {
+            throw new RuntimeException("Uma proposta nova deve ser criada com status PENDENTE. Status permitido: PENDENTE");
+        }
+    }
+
+    private void validarStatusParaAtualizacao(PropostaStatus status) {
+        validarStatus(status);
+        
+        // Ao atualizar uma proposta, permite qualquer status válido
+        // Validação mais específica pode ser adicionada conforme as regras de negócio evoluem
     }
 }
