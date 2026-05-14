@@ -2,6 +2,8 @@ package com.climb.api.controller;
 
 import com.climb.api.model.Relatorio;
 import com.climb.api.model.dto.RelatorioPdfDownloadDTO;
+import com.climb.api.model.dto.RelatorioRequestDTO;
+import com.climb.api.model.dto.RelatorioResponseDTO;
 import com.climb.api.service.RelatorioService;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -23,36 +25,43 @@ public class RelatorioController {
     }
 
     @PostMapping(value = "/{id}/upload-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Relatorio uploadPdf(
+    public ResponseEntity<RelatorioResponseDTO> uploadPdf(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file
     ) {
-        return service.uploadPdf(id, file);
+        return ResponseEntity.ok(service.uploadPdf(id, file));
     }
 
     @GetMapping
-    public List<Relatorio> listar() {
-        return service.listar();
+    public ResponseEntity<List<RelatorioResponseDTO>> listar() {
+        return ResponseEntity.ok(service.listar());
     }
 
     @GetMapping("/contrato/{contratoId}")
-    public List<Relatorio> listarPorContrato(@PathVariable Long contratoId) {
-        return service.listarPorContrato(contratoId);
+    public ResponseEntity<List<RelatorioResponseDTO>> listarPorContrato(
+            @PathVariable Long contratoId
+    ) {
+        return ResponseEntity.ok(service.listarPorContrato(contratoId));
     }
 
     @GetMapping("/{id}")
-    public Relatorio buscarPorId(@PathVariable Long id) {
-        return service.buscarPorId(id);
+    public ResponseEntity<RelatorioResponseDTO> buscarPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(service.buscarPorIdResponse(id));
     }
 
     @PostMapping
-    public Relatorio criar(@RequestBody Relatorio relatorio) {
-        return service.criar(relatorio);
+    public ResponseEntity<RelatorioResponseDTO> criar(
+            @RequestBody RelatorioRequestDTO dto
+    ) {
+        return ResponseEntity.ok(service.criar(dto));
     }
 
     @PutMapping("/{id}")
-    public Relatorio atualizar(@PathVariable Long id, @RequestBody Relatorio atualizado) {
-        return service.atualizar(id, atualizado);
+    public ResponseEntity<RelatorioResponseDTO> atualizar(
+            @PathVariable Long id,
+            @RequestBody RelatorioRequestDTO dto
+    ) {
+        return ResponseEntity.ok(service.atualizar(id, dto));
     }
 
     @GetMapping("/{id}/visualizar-pdf")
@@ -74,12 +83,13 @@ public class RelatorioController {
     }
 
     @PostMapping("/{id}/exportar-pdf")
-    public Relatorio exportarPdf(@PathVariable Long id) {
-        return service.exportarPdf(id);
+    public ResponseEntity<RelatorioResponseDTO> exportarPdf(@PathVariable Long id) {
+        return ResponseEntity.ok(service.exportarPdfResponse(id));
     }
 
     @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
+    public ResponseEntity<Void> deletar(@PathVariable Long id) {
         service.deletar(id);
+        return ResponseEntity.noContent().build();
     }
 }
