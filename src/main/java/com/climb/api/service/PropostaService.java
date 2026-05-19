@@ -22,15 +22,18 @@ public class PropostaService {
     private final EmpresaRepository empresaRepository;
     private final UsuarioRepository usuarioRepository;
     private final RbacService rbacService;
+    private final ContratoNotificacaoService contratoNotificacaoService;
 
     public PropostaService(PropostaRepository repository,
                            EmpresaRepository empresaRepository,
                            UsuarioRepository usuarioRepository,
-                           RbacService rbacService) {
+                           RbacService rbacService,
+                           ContratoNotificacaoService contratoNotificacaoService) {
         this.repository = repository;
         this.empresaRepository = empresaRepository;
         this.usuarioRepository = usuarioRepository;
         this.rbacService = rbacService;
+        this.contratoNotificacaoService = contratoNotificacaoService;
     }
 
     private PropostaResponseDTO toResponseDTO(Proposta proposta) {
@@ -102,13 +105,16 @@ public class PropostaService {
 
         Proposta proposta = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proposta não encontrada"));
+        Proposta anterior = snapshot(proposta);
 
         proposta.setEmpresa(buscarEmpresa(dto.empresaId()));
         proposta.setUsuario(buscarUsuario(dto.usuarioId()));
         proposta.setStatus(dto.status());
         proposta.setDataCriacao(dto.dataCriacao() != null ? dto.dataCriacao() : proposta.getDataCriacao());
 
-        return toResponseDTO(repository.save(proposta));
+        Proposta salva = repository.save(proposta);
+        contratoNotificacaoService.notificarPropostaAprovadaOuReprovada(anterior, salva);
+        return toResponseDTO(salva);
     }
 
     public void deletar(Long id) {
@@ -122,5 +128,15 @@ public class PropostaService {
         if (status == null || status.isBlank()) {
             throw new RuntimeException("Status é obrigatório");
         }
+    }
+
+    private Proposta snapshot(Proposta proposta) {
+        Proposta snapshot = new Proposta();
+        snapshot.setIdProposta(proposta.getIdProposta());
+        snapshot.setEmpresa(proposta.getEmpresa());
+        snapshot.setUsuario(proposta.getUsuario());
+        snapshot.setStatus(proposta.getStatus());
+        snapshot.setDataCriacao(proposta.getDataCriacao());
+        return snapshot;
     }
 }

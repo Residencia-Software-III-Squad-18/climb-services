@@ -1,6 +1,7 @@
 package com.climb.api.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -19,6 +20,11 @@ public class Reuniao {
     @ManyToOne
     @JoinColumn(name = "empresa_id", nullable = false)
     private Empresa empresa;
+
+    @JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "criador_id")
+    private Usuario criador;
 
     @Column(name = "data")
     private LocalDate data;
@@ -49,6 +55,9 @@ public class Reuniao {
 
     public Empresa getEmpresa() { return empresa; }
     public void setEmpresa(Empresa empresa) { this.empresa = empresa; }
+
+    public Usuario getCriador() { return criador; }
+    public void setCriador(Usuario criador) { this.criador = criador; }
 
     public LocalDate getData() { return data; }
     public void setData(LocalDate data) { this.data = data; }

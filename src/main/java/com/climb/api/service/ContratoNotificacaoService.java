@@ -1,10 +1,12 @@
 package com.climb.api.service;
 
 import com.climb.api.model.Contrato;
+import com.climb.api.model.Documento;
 import com.climb.api.model.Empresa;
 import com.climb.api.model.Notificacao;
 import com.climb.api.model.Proposta;
 import com.climb.api.model.Usuario;
+import com.climb.api.model.enums.DocumentoStatus;
 import com.climb.api.repository.NotificacaoRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,8 @@ public class ContratoNotificacaoService {
 
     private static final String TIPO_CONTRATO = "CONTRATO";
     private static final String TIPO_CONTRATO_VENCIMENTO = "CONTRATO_VENCIMENTO";
+    private static final String TIPO_PROPOSTA = "PROPOSTA";
+    private static final String TIPO_DOCUMENTO = "DOCUMENTO";
 
     private final NotificacaoRepository notificacaoRepository;
     private final EmailService emailService;
@@ -31,52 +35,39 @@ public class ContratoNotificacaoService {
         this.diasAvisoVencimento = diasAvisoVencimento;
     }
 
-    public void notificarContratoCriado(Contrato contrato) {
-        String assunto = "Contrato criado";
-        String mensagem = "Contrato #" + contrato.getIdContrato() + " criado com status " + contrato.getStatus() + ".";
-        notificarInteressados(contrato, assunto, mensagem, TIPO_CONTRATO);
+    public void notificarContratoAprovadoOuReprovado(Contrato anterior, Contrato atualizado) {
+        if (!mudouParaAprovadoOuReprovado(anterior.getStatus(), atualizado.getStatus())) {
+            return;
+        }
+
+        String status = statusNormalizado(atualizado.getStatus());
+        String assunto = "Contrato " + status.toLowerCase();
+        String mensagem = "Contrato #" + atualizado.getIdContrato() + " foi " + status.toLowerCase() + ".";
+        notificarInteressadosContrato(atualizado, assunto, mensagem, TIPO_CONTRATO);
     }
 
-    public void notificarContratoAtualizado(Contrato anterior, Contrato atualizado) {
-        StringBuilder detalhes = new StringBuilder();
-
-        if (!Objects.equals(anterior.getStatus(), atualizado.getStatus())) {
-            detalhes.append("Status alterado de ")
-                    .append(valorOuNaoInformado(anterior.getStatus()))
-                    .append(" para ")
-                    .append(valorOuNaoInformado(atualizado.getStatus()))
-                    .append(".\n");
+    public void notificarPropostaAprovadaOuReprovada(Proposta anterior, Proposta atualizada) {
+        if (!mudouParaAprovadoOuReprovado(anterior.getStatus(), atualizada.getStatus())) {
+            return;
         }
 
-        if (!Objects.equals(anterior.getDataInicio(), atualizado.getDataInicio())) {
-            detalhes.append("Data de inicio alterada de ")
-                    .append(valorOuNaoInformado(anterior.getDataInicio()))
-                    .append(" para ")
-                    .append(valorOuNaoInformado(atualizado.getDataInicio()))
-                    .append(".\n");
-        }
-
-        if (!Objects.equals(anterior.getDataFim(), atualizado.getDataFim())) {
-            detalhes.append("Data de fim alterada de ")
-                    .append(valorOuNaoInformado(anterior.getDataFim()))
-                    .append(" para ")
-                    .append(valorOuNaoInformado(atualizado.getDataFim()))
-                    .append(".\n");
-        }
-
-        if (detalhes.isEmpty()) {
-            detalhes.append("O contrato foi atualizado.");
-        }
-
-        String assunto = "Contrato atualizado";
-        String mensagem = "Contrato #" + atualizado.getIdContrato() + " atualizado.\n\n" + detalhes;
-        notificarInteressados(atualizado, assunto, mensagem, TIPO_CONTRATO);
+        String status = statusNormalizado(atualizada.getStatus());
+        String assunto = "Proposta " + status.toLowerCase();
+        String mensagem = "Proposta #" + atualizada.getIdProposta() + " foi " + status.toLowerCase() + ".";
+        notificarInteressadosProposta(atualizada, assunto, mensagem, TIPO_PROPOSTA);
     }
 
-    public void notificarContratoRemovido(Contrato contrato) {
-        String assunto = "Contrato removido";
-        String mensagem = "Contrato #" + contrato.getIdContrato() + " foi removido do sistema.";
-        notificarInteressados(contrato, assunto, mensagem, TIPO_CONTRATO);
+    public void notificarDocumentoAprovadoOuReprovado(DocumentoStatus anterior, Documento documento) {
+        DocumentoStatus atual = documento.getValidado();
+        if (Objects.equals(anterior, atual) || !statusDocumentoFinal(atual)) {
+            return;
+        }
+
+        String status = atual.name().toLowerCase();
+        String assunto = "Documento " + status;
+        String mensagem = "Documento #" + documento.getIdDocumento()
+                + " (" + valorOuNaoInformado(documento.getTipoDocumento()) + ") foi " + status + ".";
+        notificarInteressadosDocumento(documento, assunto, mensagem, TIPO_DOCUMENTO);
     }
 
     public void notificarVencimentoProximo(Contrato contrato, LocalDate hoje) {
@@ -94,16 +85,44 @@ public class ContratoNotificacaoService {
                 + " vence em " + diasRestantes
                 + " dia(s), na data " + contrato.getDataFim() + ".";
 
-        notificarInteressados(contrato, assunto, mensagem, TIPO_CONTRATO_VENCIMENTO);
+        notificarInteressadosContrato(contrato, assunto, mensagem, TIPO_CONTRATO_VENCIMENTO);
     }
 
-    private void notificarInteressados(Contrato contrato, String assunto, String mensagem, String tipo) {
+    private void notificarInteressadosContrato(Contrato contrato, String assunto, String mensagem, String tipo) {
         Usuario responsavel = obterResponsavel(contrato);
         Empresa empresa = obterEmpresa(contrato);
 
         if (responsavel != null) {
             salvarNotificacao(responsavel, mensagem, tipo);
             emailService.enviarEmail(responsavel.getEmail(), assunto, montarCorpo(responsavel.getNomeCompleto(), mensagem));
+        }
+
+        if (empresa != null && empresa.getEmail() != null && !empresa.getEmail().isBlank()) {
+            emailService.enviarEmail(empresa.getEmail(), assunto, montarCorpo(empresa.getNomeFantasia(), mensagem));
+        }
+    }
+
+    private void notificarInteressadosProposta(Proposta proposta, String assunto, String mensagem, String tipo) {
+        Usuario responsavel = proposta.getUsuario();
+        Empresa empresa = proposta.getEmpresa();
+
+        if (responsavel != null) {
+            salvarNotificacao(responsavel, mensagem, tipo);
+            emailService.enviarEmail(responsavel.getEmail(), assunto, montarCorpo(responsavel.getNomeCompleto(), mensagem));
+        }
+
+        if (empresa != null && empresa.getEmail() != null && !empresa.getEmail().isBlank()) {
+            emailService.enviarEmail(empresa.getEmail(), assunto, montarCorpo(empresa.getNomeFantasia(), mensagem));
+        }
+    }
+
+    private void notificarInteressadosDocumento(Documento documento, String assunto, String mensagem, String tipo) {
+        Usuario analista = documento.getAnalista();
+        Empresa empresa = documento.getEmpresa();
+
+        if (analista != null) {
+            salvarNotificacao(analista, mensagem, tipo);
+            emailService.enviarEmail(analista.getEmail(), assunto, montarCorpo(analista.getNomeCompleto(), mensagem));
         }
 
         if (empresa != null && empresa.getEmail() != null && !empresa.getEmail().isBlank()) {
@@ -145,5 +164,28 @@ public class ContratoNotificacaoService {
 
     private String valorOuNaoInformado(Object valor) {
         return valor != null ? valor.toString() : "nao informado";
+    }
+
+    private boolean mudouParaAprovadoOuReprovado(String anterior, String atual) {
+        String anteriorNormalizado = statusNormalizado(anterior);
+        String atualNormalizado = statusNormalizado(atual);
+        return !Objects.equals(anteriorNormalizado, atualNormalizado)
+                && ("APROVADO".equals(atualNormalizado) || "REPROVADO".equals(atualNormalizado));
+    }
+
+    private String statusNormalizado(String status) {
+        if (status == null) {
+            return "";
+        }
+
+        String normalizado = status.trim().toUpperCase();
+        if (normalizado.endsWith("A")) {
+            normalizado = normalizado.substring(0, normalizado.length() - 1) + "O";
+        }
+        return normalizado;
+    }
+
+    private boolean statusDocumentoFinal(DocumentoStatus status) {
+        return status == DocumentoStatus.APROVADO || status == DocumentoStatus.REPROVADO;
     }
 }

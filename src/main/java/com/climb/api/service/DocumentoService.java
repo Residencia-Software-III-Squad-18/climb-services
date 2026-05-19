@@ -35,12 +35,14 @@ public class DocumentoService {
     private final EmpresaRepository empresaRepository;
     private final UsuarioRepository usuarioRepository;
     private final DocumentoMapper documentoMapper;
+    private final ContratoNotificacaoService contratoNotificacaoService;
 
-    public DocumentoService(DocumentoRepository documentoRepository, EmpresaRepository empresaRepository, UsuarioRepository usuarioRepository, DocumentoMapper documentoMapper) {
+    public DocumentoService(DocumentoRepository documentoRepository, EmpresaRepository empresaRepository, UsuarioRepository usuarioRepository, DocumentoMapper documentoMapper, ContratoNotificacaoService contratoNotificacaoService) {
         this.documentoRepository = documentoRepository;
         this.empresaRepository   = empresaRepository;
         this.usuarioRepository   = usuarioRepository;
         this.documentoMapper     = documentoMapper;
+        this.contratoNotificacaoService = contratoNotificacaoService;
     }
 
     public List<DocumentoResponseDTO> listar() {
@@ -75,10 +77,13 @@ public class DocumentoService {
     public DocumentoResponseDTO validar(Long id, DocumentoValidacaoRequestDTO dto) {
         Documento documento = documentoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado: " + id));
+        DocumentoStatus anterior = documento.getValidado();
 
         documento.setValidado(dto.validado());
 
-        return documentoMapper.toResponseDto(documentoRepository.save(documento));
+        Documento salvo = documentoRepository.save(documento);
+        contratoNotificacaoService.notificarDocumentoAprovadoOuReprovado(anterior, salvo);
+        return documentoMapper.toResponseDto(salvo);
     }
 
     public void deletar(Long id) {

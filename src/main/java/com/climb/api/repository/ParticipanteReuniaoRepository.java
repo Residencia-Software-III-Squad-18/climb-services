@@ -9,4 +9,10 @@ public interface ParticipanteReuniaoRepository extends JpaRepository<Participant
 
     List<ParticipanteReuniao> findByReuniao_IdReuniao(Long reuniaoId);
 
+    List<ParticipanteReuniao> findByUsuario_Id(Long usuarioId);
+
+    boolean existsByReuniao_IdReuniaoAndUsuario_Id(Long reuniaoId, Long usuarioId);
+
+    void deleteByReuniao_IdReuniao(Long reuniaoId);
+
 }

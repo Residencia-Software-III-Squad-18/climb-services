@@ -46,9 +46,7 @@ public class ContratoService {
     public Contrato criar(Contrato contrato) {
         contrato.setProposta(propostaRepository.findById(obterPropostaId(contrato))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proposta nao encontrada")));
-        Contrato salvo = repository.save(contrato);
-        contratoNotificacaoService.notificarContratoCriado(salvo);
-        return salvo;
+        return repository.save(contrato);
     }
 
     public Contrato atualizar(Long id, Contrato atualizado) {
@@ -58,13 +56,12 @@ public class ContratoService {
         contrato.setDataFim(atualizado.getDataFim());
         contrato.setStatus(atualizado.getStatus());
         Contrato salvo = repository.save(contrato);
-        contratoNotificacaoService.notificarContratoAtualizado(anterior, salvo);
+        contratoNotificacaoService.notificarContratoAprovadoOuReprovado(anterior, salvo);
         return salvo;
     }
 
     public void deletar(Long id) {
         Contrato contrato = buscarPorId(id);
-        contratoNotificacaoService.notificarContratoRemovido(contrato);
         repository.delete(contrato);
     }
 
