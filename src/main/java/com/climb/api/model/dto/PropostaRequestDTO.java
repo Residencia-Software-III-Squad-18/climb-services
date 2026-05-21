@@ -9,6 +9,7 @@ public record PropostaRequestDTO(
         @NotNull Long empresaId,
         @NotNull Long usuarioId,
         @NotBlank String status,
+        String url,
         LocalDate dataCriacao
 ) {
 }
