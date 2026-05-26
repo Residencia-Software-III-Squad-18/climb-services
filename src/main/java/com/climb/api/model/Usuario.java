@@ -40,7 +40,14 @@ public class Usuario {
     private String senha;
 
     @Column(nullable = false, length = 50)
-    private String situacao;
+    private String situacao = "ATIVO";
+
+    @PrePersist
+    protected void prePersist() {
+        if (this.situacao == null) {
+            this.situacao = "ATIVO";
+        }
+    }
 
     @ManyToOne
     @JoinColumn(name = "cargo_id")

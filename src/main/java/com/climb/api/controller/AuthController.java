@@ -8,6 +8,7 @@ import com.climb.api.model.dto.GoogleAuthorizationUrlResponseDTO;
 import com.climb.api.model.dto.LoginRequestDTO;
 import com.climb.api.model.dto.LoginResponseDTO;
 import com.climb.api.model.dto.RefreshTokenRequestDTO;
+import com.climb.api.model.dto.RefreshTokenResponseDTO;
 import com.climb.api.service.AuthenticationService;
 import com.climb.api.service.GoogleOAuthService;
 import com.climb.api.util.LogSanitizer;
@@ -50,19 +51,30 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<String>> refresh(@RequestBody RefreshTokenRequestDTO dto) {
+    public ResponseEntity<ApiResponse<RefreshTokenResponseDTO>> refresh(@RequestBody RefreshTokenRequestDTO dto) {
         try {
             String newAccessToken = authenticationService.refreshAccessToken(dto.getRefreshToken());
-            return ResponseEntity.ok(ApiResponse.ok(newAccessToken, "Token renovado com sucesso"));
+            RefreshTokenResponseDTO response = new RefreshTokenResponseDTO(
+                    newAccessToken,
+                    authenticationService.getAccessTokenExpirationTime()
+            );
+            return ResponseEntity.ok(ApiResponse.ok(response, "Token renovado com sucesso"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(e.getMessage()));
         }
     }
 
     @GetMapping("/google/url")
-    public ResponseEntity<?> googleAuthorizationUrl() {
+    public ResponseEntity<?> googleAuthorizationUrl(
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Accept", required = false) String acceptHeader) {
         try {
             GoogleAuthorizationUrlResponseDTO response = googleOAuthService.gerarUrlAutorizacao();
+            boolean isJsonRequest = acceptHeader != null && acceptHeader.contains("application/json");
+            if (!isJsonRequest) {
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .header(HttpHeaders.LOCATION, response.authorizationUrl())
+                        .build();
+            }
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));

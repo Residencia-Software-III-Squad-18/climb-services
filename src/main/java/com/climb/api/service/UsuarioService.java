@@ -6,7 +6,10 @@ import org.springframework.stereotype.Service;
 
 import com.climb.api.model.Cargo;
 import com.climb.api.model.Usuario;
+import com.climb.api.model.UsuarioOAuth;
+import com.climb.api.model.OAuthProvider;
 import com.climb.api.repository.CargoRepository;
+import com.climb.api.repository.UsuarioOAuthRepository;
 import com.climb.api.repository.UsuarioRepository;
 import com.climb.api.model.dto.UsuarioRequestDTO;
 import com.climb.api.model.dto.UsuarioResponseDTO;
@@ -20,12 +23,14 @@ public class UsuarioService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final CargoRepository cargoRepository;
+    private final UsuarioOAuthRepository usuarioOAuthRepository;
         
-    public UsuarioService(UsuarioRepository repository, EmailService emailService, PasswordEncoder passwordEncoder, CargoRepository cargoRepository) {
+    public UsuarioService(UsuarioRepository repository, EmailService emailService, PasswordEncoder passwordEncoder, CargoRepository cargoRepository, UsuarioOAuthRepository usuarioOAuthRepository) {
         this.repository = repository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.cargoRepository = cargoRepository;
+        this.usuarioOAuthRepository = usuarioOAuthRepository;
     }
 
     private UsuarioResponseDTO toResponseDTO(Usuario usuario) {
@@ -42,7 +47,20 @@ public class UsuarioService {
             dto.setCargoNome(usuario.getCargo().getNome());
         }
 
+        dto.setFotoPerfil(buscarFotoPerfil(usuario));
+
         return dto;
+    }
+
+    public String buscarFotoPerfil(Usuario usuario) {
+        if (usuario == null || usuario.getId() == null) {
+            return null;
+        }
+
+        return usuarioOAuthRepository
+                .findByUsuarioIdAndProvider(usuario.getId(), OAuthProvider.GOOGLE)
+                .map(UsuarioOAuth::getAvatarUrl)
+                .orElse(null);
     }
 
     public Usuario buscarPorId(Long id) {
