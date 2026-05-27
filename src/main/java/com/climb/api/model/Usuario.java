@@ -3,6 +3,7 @@ package com.climb.api.model;
 import jakarta.persistence.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.climb.api.model.enums.PerfilUsuario;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -41,6 +42,10 @@ public class Usuario {
 
     @Column(nullable = false, length = 50)
     private String situacao;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PerfilUsuario perfil = PerfilUsuario.ANALISTA;
 
     @ManyToOne
     @JoinColumn(name = "cargo_id")

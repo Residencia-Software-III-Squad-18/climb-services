@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.climb.api.model.Cargo;
 import com.climb.api.model.Usuario;
+import com.climb.api.model.enums.PerfilUsuario;
 import com.climb.api.repository.CargoRepository;
 import com.climb.api.repository.UsuarioRepository;
 import com.climb.api.model.dto.UsuarioRequestDTO;
@@ -28,8 +29,17 @@ public class UsuarioService {
         this.cargoRepository = cargoRepository;
     }
 
+    private PerfilUsuario resolverPerfil(String perfilStr) {
+        if (perfilStr == null) return PerfilUsuario.ANALISTA;
+        try {
+            return PerfilUsuario.valueOf(perfilStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Perfil inválido. Valores aceitos: ADMIN, GESTOR, ANALISTA");
+        }
+    }
+
     private UsuarioResponseDTO toResponseDTO(Usuario usuario) {
-    UsuarioResponseDTO dto = new UsuarioResponseDTO();
+        UsuarioResponseDTO dto = new UsuarioResponseDTO();
 
         dto.setId(usuario.getId());
         dto.setNomeCompleto(usuario.getNomeCompleto());
@@ -37,6 +47,7 @@ public class UsuarioService {
         dto.setEmail(usuario.getEmail());
         dto.setContato(usuario.getContato());
         dto.setSituacao(usuario.getSituacao());
+        dto.setPerfil(usuario.getPerfil() != null ? usuario.getPerfil().name() : PerfilUsuario.ANALISTA.name());
 
         if (usuario.getCargo() != null) {
             dto.setCargoNome(usuario.getCargo().getNome());
@@ -110,6 +121,7 @@ public class UsuarioService {
         usuario.setSituacao("ATIVO");
         usuario.setCargo(cargo);
         usuario.setSenhaHash(passwordEncoder.encode(senha));
+        usuario.setPerfil(PerfilUsuario.ANALISTA);
 
         Usuario salvo = repository.save(usuario);
         emailService.enviarEmailBoasVindas(salvo.getEmail(), salvo.getNomeCompleto());
@@ -170,6 +182,8 @@ public class UsuarioService {
             throw new RuntimeException("Cargo é obrigatório");
         }
 
+        usuario.setPerfil(resolverPerfil(dto.getPerfil()));
+
         Usuario salvo = repository.save(usuario);
 
         return toResponseDTO(salvo);
@@ -213,6 +227,10 @@ public class UsuarioService {
         if (dto.getSenha() != null && !dto.getSenha().isEmpty()) {
             String senhaHash = passwordEncoder.encode(dto.getSenha());
             usuario.setSenhaHash(senhaHash);
+        }
+
+        if (dto.getPerfil() != null) {
+            usuario.setPerfil(resolverPerfil(dto.getPerfil()));
         }
 
         Usuario atualizado = repository.save(usuario);
