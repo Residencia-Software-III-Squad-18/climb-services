@@ -11,4 +11,5 @@ public class UsuarioRequestDTO {
     private String senha;
     private String situacao;
     private Long cargoId;
+    private String perfil;
 }
