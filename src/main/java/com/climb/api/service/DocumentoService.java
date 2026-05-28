@@ -57,12 +57,14 @@ public class DocumentoService {
 
     public List<DocumentoResponseDTO> listarPorEmpresa(Long empresaId) {
         return documentoMapper.toResponseDto(
-                documentoRepository.findByEmpresa_IdEmpresa(empresaId));
+                documentoRepository.findByEmpresa_IdEmpresa(empresaId)
+        );
     }
 
     public DocumentoResponseDTO buscarPorId(Long id) {
         Documento documento = documentoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado: " + id));
+
         return documentoMapper.toResponseDto(documento);
     }
 
@@ -72,10 +74,12 @@ public class DocumentoService {
         documento.setValidado(DocumentoStatus.PENDENTE);
         documento.setEmpresa(empresaRepository.findById(dto.empresaId())
                 .orElseThrow(() -> new EntityNotFoundException(
-                        "Empresa não encontrada: " + dto.empresaId())));
+                        "Empresa não encontrada: " + dto.empresaId()
+                )));
         documento.setAnalista(usuarioRepository.findById(dto.analistaId())
                 .orElseThrow(() -> new EntityNotFoundException(
-                        "Analista não encontrado: " + dto.analistaId())));
+                        "Analista não encontrado: " + dto.analistaId()
+                )));
 
         Documento salvo = documentoRepository.save(documento);
 
@@ -101,6 +105,7 @@ public class DocumentoService {
         if (!documentoRepository.existsById(id)) {
             throw new EntityNotFoundException("Documento não encontrado: " + id);
         }
+
         documentoRepository.deleteById(id);
     }
 
@@ -125,7 +130,12 @@ public class DocumentoService {
 
             String nomeArquivo = UUID.randomUUID() + "_" + arquivo.getOriginalFilename();
             Path destino = pasta.resolve(nomeArquivo);
-            Files.copy(arquivo.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
+
+            Files.copy(
+                    arquivo.getInputStream(),
+                    destino,
+                    StandardCopyOption.REPLACE_EXISTING
+            );
 
             return destino.toString();
         } catch (IOException e) {
@@ -151,23 +161,31 @@ public class DocumentoService {
                     throw new RuntimeException("PDF corrompido: " + e.getMessage());
                 }
             }
+
             case "image/jpeg", "image/png", "image/gif", "image/bmp" -> {
                 BufferedImage img = ImageIO.read(arquivo.getInputStream());
+
                 if (img == null) {
                     throw new RuntimeException("Imagem corrompida ou ilegível.");
                 }
             }
+
             case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> {
                 try (XSSFWorkbook wb = new XSSFWorkbook(arquivo.getInputStream())) {
                 } catch (Exception e) {
                     throw new RuntimeException("XLSX corrompido: " + e.getMessage());
                 }
             }
+
             case "application/vnd.ms-excel" -> {
                 try (HSSFWorkbook wb = new HSSFWorkbook(arquivo.getInputStream())) {
                 } catch (Exception e) {
                     throw new RuntimeException("XLS corrompido: " + e.getMessage());
                 }
+            }
+
+            default -> {
+                // Outros tipos são aceitos normalmente.
             }
         }
     }
