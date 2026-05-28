@@ -1,6 +1,7 @@
 package com.climb.api.service;
 
 import com.climb.api.model.Contrato;
+import com.climb.api.model.enums.ContratoStatus;
 import com.climb.api.repository.ContratoRepository;
 import com.climb.api.repository.PropostaRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,7 +40,7 @@ public class ContratoService {
         return repository.findById(id).orElseThrow();
     }
 
-    public List<Contrato> listarPorStatus(String status) {
+    public List<Contrato> listarPorStatus(ContratoStatus status) {
         return repository.findByStatus(status);
     }
 
@@ -78,12 +79,13 @@ public class ContratoService {
                 .forEach(contrato -> contratoNotificacaoService.notificarVencimentoProximo(contrato, hoje));
     }
 
-    private boolean statusIgnoradoParaVencimento(String status) {
+    private boolean statusIgnoradoParaVencimento(ContratoStatus status) {
         if (status == null) {
             return false;
         }
 
-        return Set.of("ENCERRADO", "CANCELADO", "INATIVO").contains(status.toUpperCase());
+        return Set.of(ContratoStatus.ENCERRADO, ContratoStatus.CANCELADO, ContratoStatus.INATIVO)
+                .contains(status);
     }
 
     private Contrato snapshot(Contrato contrato) {

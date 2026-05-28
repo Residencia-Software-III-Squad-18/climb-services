@@ -1,6 +1,7 @@
 package com.climb.api.controller;
 
 import com.climb.api.model.Contrato;
+import com.climb.api.model.enums.ContratoStatus;
 import com.climb.api.service.ContratoService;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,7 +28,7 @@ public class ContratoController {
     }
 
     @GetMapping("/status/{status}")
-    public List<Contrato> listarPorStatus(@PathVariable String status) {
+    public List<Contrato> listarPorStatus(@PathVariable ContratoStatus status) {
         return service.listarPorStatus(status);
     }
 

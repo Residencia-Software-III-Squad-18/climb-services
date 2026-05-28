@@ -6,10 +6,11 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.climb.api.model.Contrato;
+import com.climb.api.model.enums.ContratoStatus;
 
 public interface ContratoRepository extends JpaRepository<Contrato, Long> {
 
-    List<Contrato> findByStatus(String status);
+    List<Contrato> findByStatus(ContratoStatus status);
 
     List<Contrato> findByDataFimBetween(LocalDate inicio, LocalDate fim);
 
