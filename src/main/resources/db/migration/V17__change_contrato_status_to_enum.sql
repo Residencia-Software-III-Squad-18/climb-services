@@ -1,0 +1,12 @@
+UPDATE contratos
+SET status = 'ATIVO'
+WHERE status IS NULL
+   OR status NOT IN ('ATIVO', 'ENCERRADO', 'CANCELADO', 'INATIVO');
+
+ALTER TABLE contratos
+MODIFY COLUMN status VARCHAR(20)
+NOT NULL DEFAULT 'ATIVO';
+
+ALTER TABLE contratos
+ADD CONSTRAINT chk_contratos_status
+CHECK (status IN ('ATIVO', 'ENCERRADO', 'CANCELADO', 'INATIVO'));

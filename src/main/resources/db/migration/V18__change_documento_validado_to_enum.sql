@@ -1,0 +1,12 @@
+UPDATE documentos
+SET validado = 'PENDENTE'
+WHERE validado IS NULL
+   OR validado NOT IN ('PENDENTE', 'EM_ANALISE', 'APROVADO', 'REPROVADO');
+
+ALTER TABLE documentos
+MODIFY COLUMN validado VARCHAR(20)
+NOT NULL DEFAULT 'PENDENTE';
+
+ALTER TABLE documentos
+ADD CONSTRAINT chk_documentos_validado
+CHECK (validado IN ('PENDENTE', 'EM_ANALISE', 'APROVADO', 'REPROVADO'));

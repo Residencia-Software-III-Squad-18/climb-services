@@ -1,5 +1,6 @@
 package com.climb.api.model;
 
+import com.climb.api.model.enums.ContratoStatus;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
@@ -22,8 +23,9 @@ public class Contrato {
     @Column(name = "data_fim")
     private LocalDate dataFim;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private ContratoStatus status;
 
     public Long getIdContrato() { return idContrato; }
     public void setIdContrato(Long idContrato) { this.idContrato = idContrato; }
@@ -37,6 +39,6 @@ public class Contrato {
     public LocalDate getDataFim() { return dataFim; }
     public void setDataFim(LocalDate dataFim) { this.dataFim = dataFim; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public ContratoStatus getStatus() { return status; }
+    public void setStatus(ContratoStatus status) { this.status = status; }
 }
