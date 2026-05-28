@@ -7,6 +7,7 @@ public record PropostaResponseDTO(
         Long empresaId,
         Long usuarioId,
         String status,
+        String url,
         LocalDate dataCriacao
 ) {
 }

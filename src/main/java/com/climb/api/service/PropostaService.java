@@ -39,6 +39,7 @@ public class PropostaService {
                 proposta.getEmpresa() != null ? proposta.getEmpresa().getIdEmpresa() : null,
                 proposta.getUsuario() != null ? proposta.getUsuario().getId() : null,
                 proposta.getStatus(),
+                proposta.getUrl(),
                 proposta.getDataCriacao()
         );
     }
@@ -88,6 +89,7 @@ public class PropostaService {
         proposta.setEmpresa(buscarEmpresa(dto.empresaId()));
         proposta.setUsuario(buscarUsuario(dto.usuarioId()));
         proposta.setStatus(dto.status());
+        proposta.setUrl(dto.url());
         proposta.setDataCriacao(dto.dataCriacao() != null ? dto.dataCriacao() : LocalDate.now());
 
         return toResponseDTO(repository.save(proposta));
@@ -106,6 +108,7 @@ public class PropostaService {
         proposta.setEmpresa(buscarEmpresa(dto.empresaId()));
         proposta.setUsuario(buscarUsuario(dto.usuarioId()));
         proposta.setStatus(dto.status());
+        proposta.setUrl(dto.url());
         proposta.setDataCriacao(dto.dataCriacao() != null ? dto.dataCriacao() : proposta.getDataCriacao());
 
         return toResponseDTO(repository.save(proposta));
