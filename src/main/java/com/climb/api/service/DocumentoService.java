@@ -35,12 +35,20 @@ public class DocumentoService {
     private final EmpresaRepository empresaRepository;
     private final UsuarioRepository usuarioRepository;
     private final DocumentoMapper documentoMapper;
+    private final DocumentoEmailService documentoEmailService;
 
-    public DocumentoService(DocumentoRepository documentoRepository, EmpresaRepository empresaRepository, UsuarioRepository usuarioRepository, DocumentoMapper documentoMapper) {
+    public DocumentoService(
+            DocumentoRepository documentoRepository,
+            EmpresaRepository empresaRepository,
+            UsuarioRepository usuarioRepository,
+            DocumentoMapper documentoMapper,
+            DocumentoEmailService documentoEmailService
+    ) {
         this.documentoRepository = documentoRepository;
-        this.empresaRepository   = empresaRepository;
-        this.usuarioRepository   = usuarioRepository;
-        this.documentoMapper     = documentoMapper;
+        this.empresaRepository = empresaRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.documentoMapper = documentoMapper;
+        this.documentoEmailService = documentoEmailService;
     }
 
     public List<DocumentoResponseDTO> listar() {
@@ -69,7 +77,11 @@ public class DocumentoService {
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Analista não encontrado: " + dto.analistaId())));
 
-        return documentoMapper.toResponseDto(documentoRepository.save(documento));
+        Documento salvo = documentoRepository.save(documento);
+
+        documentoEmailService.enviarSolicitacaoDocumentacao(salvo);
+
+        return documentoMapper.toResponseDto(salvo);
     }
 
     public DocumentoResponseDTO validar(Long id, DocumentoValidacaoRequestDTO dto) {
@@ -78,7 +90,11 @@ public class DocumentoService {
 
         documento.setValidado(dto.validado());
 
-        return documentoMapper.toResponseDto(documentoRepository.save(documento));
+        Documento salvo = documentoRepository.save(documento);
+
+        documentoEmailService.enviarResultadoValidacao(salvo);
+
+        return documentoMapper.toResponseDto(salvo);
     }
 
     public void deletar(Long id) {
@@ -98,9 +114,6 @@ public class DocumentoService {
         return documentoMapper.toResponseDto(documentoRepository.save(documento));
     }
 
-    // Salvar o Arquivo
-    // Nesse momento está salvando localmente
-    // Depois deve ser integrado com a nuvem
     private String salvarArquivo(MultipartFile arquivo) {
         try {
             validarArquivo(arquivo);
@@ -131,31 +144,31 @@ public class DocumentoService {
         switch (tipo) {
             case "application/pdf" -> {
                 try (PDDocument doc = Loader.loadPDF(arquivo.getBytes())) {
-                    if (doc.getNumberOfPages() == 0)
+                    if (doc.getNumberOfPages() == 0) {
                         throw new RuntimeException("PDF corrompido: sem páginas.");
+                    }
                 } catch (IOException e) {
                     throw new RuntimeException("PDF corrompido: " + e.getMessage());
                 }
             }
             case "image/jpeg", "image/png", "image/gif", "image/bmp" -> {
                 BufferedImage img = ImageIO.read(arquivo.getInputStream());
-                if (img == null)
+                if (img == null) {
                     throw new RuntimeException("Imagem corrompida ou ilegível.");
+                }
             }
             case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> {
-                try (XSSFWorkbook wb = new XSSFWorkbook(arquivo.getInputStream())) {}
-                catch (Exception e) {
+                try (XSSFWorkbook wb = new XSSFWorkbook(arquivo.getInputStream())) {
+                } catch (Exception e) {
                     throw new RuntimeException("XLSX corrompido: " + e.getMessage());
                 }
             }
             case "application/vnd.ms-excel" -> {
-                try (HSSFWorkbook wb = new HSSFWorkbook(arquivo.getInputStream())) {}
-                catch (Exception e) {
+                try (HSSFWorkbook wb = new HSSFWorkbook(arquivo.getInputStream())) {
+                } catch (Exception e) {
                     throw new RuntimeException("XLS corrompido: " + e.getMessage());
                 }
             }
-            // Outros tipos são aceitos normalmente
         }
-
     }
 }
