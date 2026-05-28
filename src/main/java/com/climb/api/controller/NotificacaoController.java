@@ -28,6 +28,26 @@ public class NotificacaoController {
         return ResponseEntity.ok(service.listar(getUsuarioAutenticadoId()));
     }
 
+    @GetMapping("/usuario/{usuarioId}")
+    public ResponseEntity<List<NotificacaoResponseDTO>> listarPorUsuario(@PathVariable Long usuarioId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getDetails() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não autenticado");
+        }
+
+        boolean isAdmin = authentication.getAuthorities() != null &&
+                authentication.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ADMIN".equals(a.getAuthority()));
+
+        Long usuarioAutenticado = getUsuarioAutenticadoId();
+        if (!isAdmin && !usuarioAutenticado.equals(usuarioId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado");
+        }
+
+        return ResponseEntity.ok(service.listar(usuarioId));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<NotificacaoResponseDTO> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(service.buscarPorId(id, getUsuarioAutenticadoId()));
