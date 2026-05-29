@@ -21,9 +21,9 @@ services:
     env_file:
       - .env
     environment:
-      FLYWAY_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://db:3306/climb}
-      FLYWAY_USER: ${SPRING_DATASOURCE_USERNAME:-${MYSQL_USER:-climb}}
-      FLYWAY_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-${MYSQL_PASSWORD:-secret}}
+      FLYWAY_URL: jdbc:mysql://db:3306/climb?allowPublicKeyRetrieval=true&useSSL=false
+      FLYWAY_USER: ${MYSQL_USER:-climb}
+      FLYWAY_PASSWORD: ${MYSQL_PASSWORD:-secret}
       FLYWAY_BASELINE_ON_MIGRATE: "true"
     volumes:
       - ./src/main/resources/db/migration:/flyway/sql
@@ -41,9 +41,9 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       SPRING_FLYWAY_ENABLED: "false"
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://db:3306/climb}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-${MYSQL_USER:-climb}}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-${MYSQL_PASSWORD:-secret}}
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/climb?allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-climb}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-secret}
     depends_on:
       flyway:
         condition: service_completed_successfully
