@@ -13,12 +13,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import com.climb.api.config.Permissao;
+import com.climb.api.model.PermissaoCodigo;
 
 import java.net.URI;
 import java.util.List;
 
 @RestController
 @RequestMapping("/documentos")
+@Permissao(com.climb.api.model.PermissaoCodigo.DOCUMENTO_JURIDICO_CRUD)
 @Tag(name = "Documentos", description = "Endpoints internos de gestão documental ")
 public class DocumentoController {
 

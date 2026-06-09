@@ -3,11 +3,14 @@ package com.climb.api.controller;
 import com.climb.api.model.Relatorio;
 import com.climb.api.service.RelatorioService;
 import org.springframework.web.bind.annotation.*;
+import com.climb.api.config.Permissao;
+import com.climb.api.model.PermissaoCodigo;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/relatorios")
+@Permissao(PermissaoCodigo.RELATORIO_CRUD)
 public class RelatorioController {
 
     private final RelatorioService service;

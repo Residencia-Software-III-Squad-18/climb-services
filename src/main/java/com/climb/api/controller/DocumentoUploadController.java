@@ -11,10 +11,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.climb.api.config.Permissao;
+import com.climb.api.model.PermissaoCodigo;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/documentos")
+@Permissao(PermissaoCodigo.DOCUMENTO_JURIDICO_CRUD)
 @Tag(name = "Upload de Documentos", description = "Endpoint autenticados para envio de documentos")
 public class DocumentoUploadController {
 
