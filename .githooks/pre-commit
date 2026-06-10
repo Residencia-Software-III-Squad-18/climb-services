@@ -1,0 +1,10 @@
+#!/bin/sh
+# Pre-commit hook to run tests and prevent commits if tests fail
+echo "Executando testes (mvn test)..."
+mvn -q -DskipTests=false test
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+  echo "Alguns testes falharam. Commit cancelado."
+  exit $RESULT
+fi
+exit 0
