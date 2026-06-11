@@ -3,11 +3,14 @@ package com.climb.api.controller;
 import com.climb.api.model.Contrato;
 import com.climb.api.service.ContratoService;
 import org.springframework.web.bind.annotation.*;
+import com.climb.api.config.Permissao;
+import com.climb.api.model.PermissaoCodigo;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/contratos")
+@Permissao(PermissaoCodigo.CONTRATO_CRUD)
 public class ContratoController {
 
     private final ContratoService service;

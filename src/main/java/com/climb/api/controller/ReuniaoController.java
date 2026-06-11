@@ -6,11 +6,14 @@ import com.climb.api.service.ReuniaoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
+import com.climb.api.config.Permissao;
+import com.climb.api.model.PermissaoCodigo;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/reunioes")
+@Permissao(PermissaoCodigo.REUNIAO_AGENDAMENTO)
 public class ReuniaoController {
 
     private static final Logger log = LoggerFactory.getLogger(ReuniaoController.class);

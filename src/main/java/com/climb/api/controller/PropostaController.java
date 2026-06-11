@@ -4,6 +4,8 @@ import com.climb.api.model.dto.ApiResponse;
 import com.climb.api.model.dto.PropostaRequestDTO;
 import com.climb.api.model.dto.PropostaResponseDTO;
 import com.climb.api.service.PropostaService;
+import com.climb.api.config.Permissao;
+import com.climb.api.model.PermissaoCodigo;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/propostas")
+@Permissao(PermissaoCodigo.PROPOSTA_CRUD)
 public class PropostaController {
 
     private final PropostaService service;
