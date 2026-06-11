@@ -36,6 +36,29 @@ Gerenciadas automaticamente pelo Maven via `pom.xml`:
 ./mvnw test
 ```
 
+## Testes de Arquitetura (ArchUnit)
+
+O projeto possui testes ArchUnit para padronizar a arquitetura e bloquear desvios como:
+
+- controllers fora do escopo e sem o sufixo `Controller`
+- repositories que não são interfaces
+- modelos sem `@Entity`
+- campos públicos em classes do pacote `com.climb.api`
+
+Para forçar a execução dos testes antes de cada commit, habilite o hook local do Git:
+
+```powershell
+git config --local core.hooksPath .githooks
+```
+
+Depois disso, o arquivo [.githooks/pre-commit](.githooks/pre-commit) passa a ser executado automaticamente no commit.
+
+Para validar manualmente:
+
+```bash
+./mvnw test
+```
+
 ### Rodar localmente
 
 ```bash
