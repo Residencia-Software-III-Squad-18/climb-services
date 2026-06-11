@@ -233,6 +233,8 @@ public class GoogleOAuthService {
             usuario.setNomeCompleto(exchangeCode.getUserName());
             usuario.setSituacao(exchangeCode.getUserStatus());
             usuario.setCargoNome(exchangeCode.getUserRole());
+            Usuario usuarioEntity = usuarioService.buscarPorId(exchangeCode.getUserId());
+            usuario.setFotoPerfil(usuarioService.buscarFotoPerfil(usuarioEntity));
         }
 
         log.info("GoogleOAuthService.exchangeCode — sucesso: userId={}, googleAccessToken={}, appAccessToken length={}",
@@ -485,7 +487,46 @@ public class GoogleOAuthService {
             dto.setCargoNome(usuario.getCargo().getNome());
         }
 
+        String fotoPerfil = sincronizarVinculoGoogle(usuario, userInfo, email);
+        if ((fotoPerfil == null || fotoPerfil.isBlank()) && userInfo != null && userInfo.get("picture") != null) {
+            fotoPerfil = userInfo.get("picture").toString();
+        }
+        dto.setFotoPerfil(fotoPerfil);
+
         return dto;
+    }
+
+    private String sincronizarVinculoGoogle(Usuario usuario, Map<String, Object> userInfo, String email) {
+        if (usuario == null || userInfo == null || userInfo.get("sub") == null) {
+            return usuarioService.buscarFotoPerfil(usuario);
+        }
+
+        String providerUserId = userInfo.get("sub").toString();
+        String avatarUrl = userInfo.get("picture") != null ? userInfo.get("picture").toString() : null;
+        String nome = userInfo.get("name") != null ? userInfo.get("name").toString() : usuario.getNomeCompleto();
+
+        UsuarioOAuth vinculo = usuarioOAuthRepository
+                .findByProviderAndProviderUserId(OAuthProvider.GOOGLE, providerUserId)
+                .orElseGet(() -> usuarioOAuthRepository
+                        .findByUsuarioIdAndProvider(usuario.getId(), OAuthProvider.GOOGLE)
+                        .orElseGet(UsuarioOAuth::new));
+
+        if (vinculo.getId() != null && !vinculo.getUsuario().getId().equals(usuario.getId())) {
+            throw new RuntimeException("Esta conta Google ja esta vinculada a outro usuario");
+        }
+
+        vinculo.setUsuario(usuario);
+        vinculo.setProvider(OAuthProvider.GOOGLE);
+        vinculo.setProviderUserId(providerUserId);
+        vinculo.setEmailProvider(email);
+        vinculo.setNomeProvider(nome);
+        vinculo.setAvatarUrl(avatarUrl);
+        if (vinculo.getVinculadoEm() == null) {
+            vinculo.setVinculadoEm(LocalDateTime.now());
+        }
+
+        usuarioOAuthRepository.save(vinculo);
+        return avatarUrl;
     }
 
     private Usuario criarUsuarioGoogle(String email, Map<String, Object> userInfo) {

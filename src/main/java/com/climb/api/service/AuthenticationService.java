@@ -65,6 +65,7 @@ public class AuthenticationService {
             dto.setCargoNome(usuario.getCargo().getNome());
         }
 
+        dto.setFotoPerfil(usuarioService.buscarFotoPerfil(usuario));
         return dto;
     }
 
@@ -86,5 +87,9 @@ public class AuthenticationService {
         long expiresIn = jwtUtil.getAccessTokenExpirationTime();
 
         return new LoginResponseDTO(accessToken, refreshToken, usuarioDTO, expiresIn);
+    }
+
+    public long getAccessTokenExpirationTime() {
+        return jwtUtil.getAccessTokenExpirationTime();
     }
 }
