@@ -195,10 +195,6 @@ public class PropostaService {
             throw new RuntimeException("Status é obrigatório");
         }
 
-        if (dto.status() == PropostaStatus.PENDENTE) {
-            throw new RuntimeException("Status inválido para aprovação");
-        }
-
         Proposta proposta = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proposta não encontrada"));
 
@@ -208,8 +204,23 @@ public class PropostaService {
             return toResponseDTO(proposta);
         }
 
-        if (statusAnterior == PropostaStatus.APROVADA || statusAnterior == PropostaStatus.REJEITADA) {
-            throw new RuntimeException("Não é permitido alterar o status de uma proposta já aprovada ou rejeitada");
+        switch (statusAnterior) {
+            case APROVADA ->
+                    throw new RuntimeException(
+                            "Não é permitido alterar o status de uma proposta já aprovada"
+                    );
+
+            case REJEITADA -> {
+                if (dto.status() != PropostaStatus.PENDENTE) {
+                    throw new RuntimeException(
+                            "Uma proposta rejeitada só pode voltar para PENDENTE"
+                    );
+                }
+            }
+
+            case PENDENTE -> {
+                // Permite APROVADA ou REJEITADA
+            }
         }
 
         proposta.setStatus(dto.status());
